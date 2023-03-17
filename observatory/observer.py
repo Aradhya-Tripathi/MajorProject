@@ -8,11 +8,7 @@ logging.getLogger("scapy").setLevel(logging.ERROR)
 
 from scapy import all
 
-word = "src"
-pattern = r"\b" + word + r"\b\s+(\S+)"
-
-
-SRC_PATTERN = re.compile(pattern)
+SRC_PATTERN = re.compile(r"\bsrc\b\s+(\S+)")
 
 
 def convert_unix_timestamp(timestamp: float) -> str:
