@@ -1,3 +1,4 @@
 notes.txt
 archive/
 __pycache__
+.env
