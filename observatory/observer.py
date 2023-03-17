@@ -24,8 +24,7 @@ class Observer:
     __slots__ = (
         "sniff_count",
         "bp_filters",
-        "extra_details",
-        "details_required",
+        "questions",
         "verbose",
         "proto_lookup_table",
     )
@@ -34,21 +33,21 @@ class Observer:
         self,
         sniff_count: int = 0,
         bp_filters: str | None = None,
-        extra_details: list | None = None,
+        extra_questions: list | None = None,
         verbose: bool = False,
     ):
         self.bp_filters = bp_filters if bp_filters else ""
         self.sniff_count = sniff_count
         self.verbose = verbose
-        extra_details = extra_details if extra_details else []
+        extra_questions = extra_questions if extra_questions else []
 
-        self.details_required = self.requirements_from_sniff(
-            extra_details=extra_details
+        self.questions = self.questions_from_sniff(
+            extra_questions=extra_questions
         )
         self.proto_lookup_table = self.proto_lookup()
 
-    def requirements_from_sniff(self, extra_details: list | None) -> list[str]:
-        details = [
+    def questions_from_sniff(self, extra_questions: list | None) -> list[str]:
+        questions = [
             "dst",
             "src",
             "ttl",
@@ -62,8 +61,8 @@ class Observer:
             "time",
             "payload",
         ]
-        details.extend(extra_details if extra_details else [])
-        return details
+        questions.extend(extra_questions if extra_questions else [])
+        return questions
 
     def proto_lookup(self) -> dict[int, str]:
         """
@@ -83,26 +82,26 @@ class Observer:
 
         print("-" * 20, "Packet Information", "-" * 20)
 
-        for requirments in self.details_required:
+        for question in self.questions:
             try:
-                if requirments == "proto":
-                    question_and_answers[requirments] = self.proto_lookup_table[
-                        getattr(packet[all.IP], requirments)
+                if question == "proto":
+                    question_and_answers[question] = self.proto_lookup_table[
+                        getattr(packet[all.IP], question)
                     ]
 
-                elif requirments == "time":
-                    question_and_answers[requirments] = convert_unix_timestamp(
-                        getattr(packet[all.IP], requirments)
+                elif question == "time":
+                    question_and_answers[question] = convert_unix_timestamp(
+                        getattr(packet[all.IP], question)
                     )
 
-                elif requirments == "route":
-                    question_and_answers[requirments] = getattr(
-                        packet[all.IP], requirments
+                elif question == "route":
+                    question_and_answers[question] = getattr(
+                        packet[all.IP], question
                     )()
 
                 else:
-                    question_and_answers[requirments] = getattr(
-                        packet[all.IP], requirments
+                    question_and_answers[question] = getattr(
+                        packet[all.IP], question
                     )
             except (IndexError, AttributeError) as e:
                 print(f"Error: {e}; {packet}")
@@ -113,6 +112,8 @@ class Observer:
         print("-" * 20, "End Of Information", "-" * 20, end="\n\n")
 
     def send_network_request(self, src: str) -> None:
+        """Sends http request to the specified sRC"""
+
         print(f"Sending Request To {src}", end="\n\n")
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         sock.connect((src, 80))
@@ -145,4 +146,4 @@ class Observer:
 
 
 if __name__ == "__main__":
-    Observer(extra_details=["route"], bp_filters="udp").observe()
+    Observer(extra_questions=["route"], bp_filters="ip").observe()
