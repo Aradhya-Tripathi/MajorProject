@@ -1,4 +1,5 @@
 import logging
+import os
 import re
 import socket
 import time
@@ -25,7 +26,6 @@ class Observer:
         "sniff_count",
         "bp_filters",
         "questions",
-        "verbose",
         "proto_lookup_table",
     )
 
@@ -34,16 +34,18 @@ class Observer:
         sniff_count: int = 0,
         bp_filters: str | None = None,
         extra_questions: list | None = None,
-        verbose: bool = False,
     ):
+
+        if os.getuid() != 0:
+            raise PermissionError(
+                "Not enough permissions to run this sniffer use as root"
+            )
+
         self.bp_filters = bp_filters if bp_filters else ""
         self.sniff_count = sniff_count
-        self.verbose = verbose
         extra_questions = extra_questions if extra_questions else []
 
-        self.questions = self.questions_from_sniff(
-            extra_questions=extra_questions
-        )
+        self.questions = self.questions_from_sniff(extra_questions=extra_questions)
         self.proto_lookup_table = self.proto_lookup()
 
     def questions_from_sniff(self, extra_questions: list | None) -> list[str]:
@@ -95,14 +97,10 @@ class Observer:
                     )
 
                 elif question == "route":
-                    question_and_answers[question] = getattr(
-                        packet[all.IP], question
-                    )()
+                    question_and_answers[question] = getattr(packet[all.IP], question)()
 
                 else:
-                    question_and_answers[question] = getattr(
-                        packet[all.IP], question
-                    )
+                    question_and_answers[question] = getattr(packet[all.IP], question)
             except (IndexError, AttributeError) as e:
                 print(f"Error: {e}; {packet}")
 
