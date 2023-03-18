@@ -5,7 +5,9 @@ import socket
 import time
 from datetime import datetime
 
-from rich.console import Console
+from rich import print as pprint
+from rich.console import Group
+from rich.panel import Panel
 
 logging.getLogger("scapy").setLevel(logging.ERROR)
 
@@ -26,7 +28,6 @@ QUESTIONS = [
     "time",
     "payload",
 ]
-pprint = Console()
 
 
 def convert_unix_timestamp(timestamp: float) -> str:
@@ -90,10 +91,8 @@ class Observer:
 
     def prn(self, packet: all.Packet) -> None:
         question_and_answers = {}
+        panels = []
         self.packets.append(packet)
-
-        if self.verbose:
-            print("-" * 20, "Packet Information", "-" * 20)
 
         for question in self.questions:
             try:
@@ -113,24 +112,31 @@ class Observer:
                 else:
                     question_and_answers[question] = getattr(packet[all.IP], question)
             except (IndexError, AttributeError) as e:
-                print(f"Error: {e}; {packet}")
+                panels.append((f"[red]Error: {e}; {packet}"))
 
         if self.verbose:
             for k, v in question_and_answers.items():
-                print(f"{k}: {v}")
+                panels.append(f"[cyan]{k}: [green]{v}")
 
-            print("-" * 20, "End Of Information", "-" * 20, end="\n\n")
+            panel_group = Group(*panels)
+
+            pprint(
+                Panel(
+                    panel_group,
+                    title="[red]Packet Information",
+                    subtitle="[red]End Of Information",
+                )
+            )
 
     def send_network_request(self, src: str) -> None:
         """Sends http request to the specified sRC"""
-
-        print(f"Sending Request To {src}", end="\n\n")
+        pprint(f"\n[cyan]Sending Request To [bold green]{src}", end="\n\n")
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         sock.connect((src, 80))
 
     def observe(self) -> None:
         if not self.sniff_count:
-            print("Starting Sniffer Press Ctrl + C to exit", end="\n\n")
+            pprint("[italic]Starting Sniffer Press Ctrl + C to exit", end="\n\n")
 
         # Using filters as Specified by BPF
 

@@ -4,6 +4,9 @@ import typer
 
 logging.getLogger("scapy").setLevel(logging.ERROR)
 
+from rich import print as pprint
+from rich.console import Group
+from rich.panel import Panel
 from scapy import all
 
 from classify.abuse import abuse
@@ -31,15 +34,33 @@ def sniff(
 
 
 @app.command()
-def classify(url: str, protocal: str = "tcp", verbose: bool = False):
+def classify(ip: str, protocal: str = "tcp", verbose: bool = False):
     observer = Observer(
-        sniff_count=1, bp_filters=f"{protocal} and src {url}", verbose=verbose
+        sniff_count=1, bp_filters=f"{protocal} and src {ip}", verbose=verbose
     )
     packets = observer.observe()
     src = packets[0][all.IP].src
 
-    status = abuse(src)
-    print(status)
+    data = abuse(src).get("data", None)
+
+    if not data:
+        raise Exception(
+            f"Details about this Ip address {ip} not found in the database!"
+        )
+
+    panels = Group(
+        *[
+            f"[cyan]Confidance Score: [bold red] {data['abuseConfidenceScore']} [bold red]UNSAFE"
+            if data["abuseConfidenceScore"] > 50
+            else f"[cyan]Confidance Score: [bold green] {data['abuseConfidenceScore']} [bold green]SAFE",
+            f"[cyan]Is a Public IP: [green]{data['isPublic']}",
+            f"[cyan]Internet Service Provider: [green]{data['isp']}",
+            f"[cyan]Domain: [green]{data['domain']}",
+            f"[cyan]Usage of this domain: [green]{data['usageType']}",
+        ]
+    )
+
+    pprint(Panel(panels, title="IP address details"))
 
 
 if __name__ == "__main__":
