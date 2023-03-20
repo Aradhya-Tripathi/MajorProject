@@ -9,8 +9,8 @@ from rich.console import Group
 from rich.panel import Panel
 from scapy import all
 
-from classify.abuse import abuse
-from observatory.observer import Observer
+from observatory.classify.abuse import abuse
+from observatory.sniff.sniff import Sniffer
 
 app = typer.Typer()
 
@@ -27,7 +27,7 @@ def sniff(
     if extra_questions:
         extra_questions = extra_questions.strip().split(",")
 
-    observer = Observer(
+    observer = Sniffer(
         sniff_count=sniff_count, bp_filters=bp_filters, extra_questions=extra_questions
     )
     observer.observe()
@@ -35,7 +35,7 @@ def sniff(
 
 @app.command()
 def classify(ip: str, protocal: str = "tcp", verbose: bool = False):
-    observer = Observer(
+    observer = Sniffer(
         sniff_count=1, bp_filters=f"{protocal} and src {ip}", verbose=verbose
     )
     packets = observer.observe()

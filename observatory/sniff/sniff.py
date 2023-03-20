@@ -39,7 +39,7 @@ def get_src(bp_filters: str) -> str:
         return ip[0]
 
 
-class Observer:
+class Sniffer:
     __slots__ = (
         "sniff_count",
         "bp_filters",
@@ -163,4 +163,4 @@ class Observer:
 
 
 if __name__ == "__main__":
-    Observer(extra_questions=["route"], bp_filters="ip").observe()
+    Sniffer(extra_questions=["route"], bp_filters="ip").observe()

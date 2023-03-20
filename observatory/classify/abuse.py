@@ -2,7 +2,7 @@ import os
 
 import requests
 
-from utils import load_env
+from observatory.utils import load_env
 
 load_env()
 
