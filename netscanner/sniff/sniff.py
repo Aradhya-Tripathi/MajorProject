@@ -62,6 +62,8 @@ class Sniffer:
                 "Not enough permissions to run this sniffer use as root"
             )
 
+        pprint("[cyan]Initializing Parameters...")
+
         self.verbose = verbose
         self.bp_filters = bp_filters if bp_filters else ""
         self.sniff_count = sniff_count
@@ -70,6 +72,8 @@ class Sniffer:
         self.questions = self.questions_from_sniff(extra_questions=extra_questions)
         self.proto_lookup_table = self.proto_lookup()
         self.packets = []
+
+        pprint("[cyan]Parameters initialized.")
 
     def questions_from_sniff(self, extra_questions: list | None) -> list[str]:
         """Get questions and extra details for IP packet."""
@@ -148,7 +152,8 @@ class Sniffer:
         sniffer.start()
 
         if src := get_src(self.bp_filters):
-            self.send_network_request(src)
+            while len(self.packets) < self.sniff_count:
+                self.send_network_request(src)
 
         if not self.sniff_count:
             try:

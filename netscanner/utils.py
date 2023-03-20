@@ -2,7 +2,7 @@ import os
 from pathlib import Path
 
 
-def load_env(root_path: str = "./.env"):
+def load_env(root_path: str = "./netscanner/.env"):
     # Decent alternative for load env (excess deps)
     root_path = (
         os.path.join(Path(__file__).parent.parent.resolve(), ".env")

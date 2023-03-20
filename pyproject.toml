@@ -1,5 +1,5 @@
 [tool.poetry]
-name = "observatory"
+name = "netscanner"
 version = "0.1.0"
 description = "Sniff and classify incoming and outgoing network packets."
 authors = ["Aradhya Tripathi <67282231+Aradhya-Tripathi@users.noreply.github.com>"]
@@ -28,4 +28,4 @@ build-backend = "poetry.core.masonry.api"
 
 
 [tool.poetry.scripts]
-observatory = 'observatory.app:app'
+netscanner = 'netscanner.app:app'

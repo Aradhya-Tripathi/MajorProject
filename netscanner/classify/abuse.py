@@ -2,7 +2,7 @@ import os
 
 import requests
 
-from observatory.utils import load_env
+from netscanner.utils import load_env
 
 load_env()
 

@@ -1,10 +1,10 @@
 ----------Sniff-----------
-sudo python app.py sniff --sniff-count 10 --bp-filters "tcp and src github.com"
-sudo python app.py sniff --sniff-count 10
+sudo netscanner sniff --sniff-count 10 --bp-filters "tcp and src github.com"
+sudo netscanner sniff --sniff-count 10
 
 ----------Classify IPAbuseDB--------
 # Unsafe IP DEMO
-sudo python app.py classify 103.146.202.146
+sudo netscanner classify 103.146.202.146
 
 # Safe IP DEMO
-sudo python app.py classify 20.207.73.82
+sudo netscanner classify 20.207.73.82
