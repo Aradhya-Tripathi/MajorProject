@@ -1,8 +1,8 @@
-----------Sniff-----------
-sudo netscanner sniff --sniff-count 10 --bp-filters "tcp and src github.com"
+# Sniff
+sudo netscanner sniff --sniff-count 10 --send-request --bp-filters "tcp and src github.com"
 sudo netscanner sniff --sniff-count 10
 
-----------Classify IPAbuseDB--------
+# Classify IPAbuseDB
 # Unsafe IP DEMO
 sudo netscanner classify 103.146.202.146
 

@@ -47,6 +47,8 @@ class Sniffer:
         "proto_lookup_table",
         "packets",
         "verbose",
+        "packet_count",
+        "send_request",
     )
 
     def __init__(
@@ -55,6 +57,7 @@ class Sniffer:
         bp_filters: str | None = None,
         extra_questions: list | None = None,
         verbose: bool = True,
+        send_request: bool = False,
     ):
 
         if os.getuid() != 0:
@@ -65,6 +68,7 @@ class Sniffer:
         pprint("[cyan]Initializing Parameters...")
 
         self.verbose = verbose
+        self.send_request = send_request
         self.bp_filters = bp_filters if bp_filters else ""
         self.sniff_count = sniff_count
         extra_questions = extra_questions if extra_questions else []
@@ -72,6 +76,7 @@ class Sniffer:
         self.questions = self.questions_from_sniff(extra_questions=extra_questions)
         self.proto_lookup_table = self.proto_lookup()
         self.packets = []
+        self.packet_count = 0
 
         pprint("[cyan]Parameters initialized.")
 
@@ -97,6 +102,7 @@ class Sniffer:
         question_and_answers = {}
         panels = []
         self.packets.append(packet)
+        self.packet_count += 1
 
         for question in self.questions:
             try:
@@ -127,8 +133,8 @@ class Sniffer:
             pprint(
                 Panel(
                     panel_group,
-                    title="[red]Packet Information",
-                    subtitle="[red]End Of Information",
+                    title=f"[red]Packet Information Packet Count: {self.packet_count}",
+                    subtitle=f"[red]End Of Information Packet Count: {self.packet_count}",
                 )
             )
 
@@ -139,10 +145,10 @@ class Sniffer:
         sock.connect((src, 80))
 
     def observe(self) -> None:
-        if not self.sniff_count:
-            pprint("[italic]Starting Sniffer Press Ctrl + C to exit", end="\n\n")
+        if not self.sniff_count or not self.send_request:
+            pprint("[italic]Actively Sniffing Press Ctrl + C to exit", end="\n\n")
 
-        # Using filters as Specified by BPF
+        # Using filters as Specified by BPF (https://en.wikipedia.org/wiki/Berkeley_Packet_Filter)
 
         sniffer = all.AsyncSniffer(
             prn=self.prn,
@@ -151,9 +157,10 @@ class Sniffer:
         )
         sniffer.start()
 
-        if src := get_src(self.bp_filters):
-            while len(self.packets) < self.sniff_count:
-                self.send_network_request(src)
+        if self.send_request:
+            if src := get_src(self.bp_filters):
+                while len(self.packets) < self.sniff_count:
+                    self.send_network_request(src)
 
         if not self.sniff_count:
             try:

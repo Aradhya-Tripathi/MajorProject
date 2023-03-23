@@ -3,13 +3,16 @@ from rich.console import Group
 from rich.panel import Panel
 from scapy import all
 
-from netscanner.classify.abuse import abuse
+from netscanner.ip.external import abuse
 from netscanner.sniff.sniff import Sniffer
 
 
 def classify_request(request_to: str):
     sniffer = Sniffer(
-        sniff_count=1, bp_filters=f"ip and src {request_to}", verbose=True
+        sniff_count=1,
+        bp_filters=f"ip and src {request_to}",
+        verbose=True,
+        send_request=True,
     )
     packets = sniffer.observe()
     data = abuse(packets[0][all.IP].src).get("data", None)

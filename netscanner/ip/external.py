@@ -16,3 +16,10 @@ def abuse(src: str) -> int:
 
     response = session.get(url=url, headers=headers, params=params)
     return response.json()
+
+
+def ip_details(ip: str) -> dict[str, str]:
+    response = session.get(
+        f"https://ip.city/api.php?ip={ip}&key={os.getenv('IP.City-Key')}"
+    )
+    return response.json()
