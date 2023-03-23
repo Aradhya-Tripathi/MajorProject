@@ -39,16 +39,16 @@ def sniff(
 
 @app.command()
 def classify(request_to: str):
-    from netscanner.ip.classify import classify_request
+    from netscanner.ip.navigator import Navigator
 
-    classify_request(request_to=request_to)
+    Navigator(ip=request_to).classify_request()
 
 
 @app.command()
 def traceroute(destination: str, verbose: bool = False):
-    from netscanner.ip.trace import trace_packet_route
+    from netscanner.ip.navigator import Navigator
 
-    trace_packet_route(destination=destination, verbose=verbose)
+    Navigator(ip=destination).trace_packet_route(verbose=verbose)
 
 
 @app.command()
