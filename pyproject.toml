@@ -20,6 +20,7 @@ rich = "13.3.2"
 scapy = "2.5.0"
 typer = "0.7.0"
 urllib3 = "1.26.15"
+pymongo = "^4.3.3"
 
 
 [build-system]

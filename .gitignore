@@ -2,3 +2,5 @@ notes.txt
 archive/
 __pycache__
 .env
+dbip*
+.DS_*

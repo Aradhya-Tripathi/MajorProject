@@ -1,5 +1,4 @@
 import socket
-from concurrent.futures import ThreadPoolExecutor
 
 from rich import print as pprint
 from rich.console import Console, Group
@@ -7,7 +6,7 @@ from rich.panel import Panel
 from rich.table import Table
 from scapy import all as modules
 
-from netscanner.ip.external import abuse, ip_details
+from netscanner.ip.external import abuse, primary_details_source
 from netscanner.ip.utils import public_ip
 from netscanner.sniff.sniff import Sniffer
 
@@ -41,7 +40,7 @@ class Navigator:
                 verbose=verbose,
             )
 
-        pprint("[cyan]Sent and received packets.")
+        pprint("[magenta]Sent and received packets.")
         # Here we want to look at the recieved packet's source IP address as that will
         # tell us the IP address of the router which sent the packet.
         self.intermediate_node_addresses = [received.src for _, received in ans]
@@ -65,37 +64,32 @@ class Navigator:
             "Finding location of source IP of the responding nodes...\n",
             spinner="earth",
         ):
-            with ThreadPoolExecutor() as executor:
-                self.intermediate_node_details = executor.map(
-                    ip_details, self.intermediate_node_addresses
-                )
+            self.intermediate_node_details = primary_details_source(
+                ip_list=self.intermediate_node_addresses
+            )
 
         self.foramt_traced_route()
 
     def foramt_traced_route(self) -> None:
         table = Table(
-            title=f"Path taken by packets to reach {self.ip}",
+            title=f"[green]Path taken by packets to reach {self.ip}",
         )
 
-        table.add_column("Sno.", justify="center", style="cyan", no_wrap=True)
         table.add_column("Country", justify="center", style="cyan", no_wrap=True)
         table.add_column("City", style="magenta")
         table.add_column("Region", justify="center", style="green")
         table.add_column("IP", justify="center", style="cyan")
-        table.add_column("Organisation", justify="center", style="magenta")
         table.add_column("Latitude", justify="center", style="cyan")
         table.add_column("Longitude", justify="center", style="cyan")
 
-        for idx, detail in enumerate(self.intermediate_node_details, start=1):
+        for ip, detail in self.intermediate_node_details.items():
             table.add_row(
-                str(idx),
-                detail["countryName"],
-                detail.get("city"),
-                detail.get("region"),
-                detail.get("ip"),
-                detail.get("organisation"),
-                str(detail.get("lat")),
-                str(detail.get("long")),
+                detail["country_name"],
+                detail["city_name"],
+                detail["region_name"],
+                ip,
+                str(detail["latitude"]),
+                str(detail["longitude"]),
             )
 
         pprint(table)
@@ -130,7 +124,3 @@ class Navigator:
         )
 
         pprint(Panel(panels, title="[red]IP address details"))
-
-
-if __name__ == "__main__":
-    Navigator(ip="rando").foramt_traced_route()
