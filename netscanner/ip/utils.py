@@ -1,7 +1,7 @@
 import shlex
 import subprocess
 
-from rich import print as pprint
+from netscanner.ip import console
 
 
 def private_ip():
@@ -17,7 +17,7 @@ def private_ip():
         shlex.split("awk '{print $2}'"), stdin=localhost.stdout
     ).decode()
 
-    pprint(f"[cyan]Private IP address is: [bold]{ip}")
+    console.print(f"[cyan]Private IP address is: [bold]{ip}")
 
 
 def public_ip(show: bool = True) -> str:
@@ -28,5 +28,14 @@ def public_ip(show: bool = True) -> str:
     ).decode()
     dev_null.close()
     if show:
-        pprint(f"[cyan]Public IP address is: [bold]{ip}")
+        console.print(f"[cyan]Public IP address is: [bold]{ip}")
     return ip
+
+
+def trackcalls(func):
+    def inner(*args, **kwargs):
+        inner.has_been_called = True
+        return func(*args, **kwargs)
+
+    inner.has_been_called = False
+    return inner

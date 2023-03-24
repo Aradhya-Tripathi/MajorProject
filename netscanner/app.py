@@ -3,7 +3,7 @@ import logging
 import typer
 
 logging.getLogger("scapy").setLevel(logging.ERROR)
-
+from netscanner.ip.renderer import Renderer
 
 app = typer.Typer()
 
@@ -25,13 +25,12 @@ def sniff(
     if extra_questions:
         extra_questions = extra_questions.strip().split(",")
 
-    observer = Sniffer(
+    Sniffer(
         sniff_count=sniff_count,
         bp_filters=bp_filters,
         extra_questions=extra_questions,
         send_request=send_request,
     )
-    observer.observe()
 
 
 ######################## IP action commands ########################
@@ -41,14 +40,27 @@ def sniff(
 def classify(request_to: str):
     from netscanner.ip.navigator import Navigator
 
-    Navigator(ip=request_to).classify_request()
+    navigator = Navigator(ip=request_to)
+    navigator.abuse_ip_classification_on_single_address()
+    Renderer(navigator=navigator)
 
 
 @app.command()
-def traceroute(destination: str, verbose: bool = False):
+def traceroute(destination: str):
     from netscanner.ip.navigator import Navigator
 
-    Navigator(ip=destination).trace_packet_route(verbose=verbose)
+    navigator = Navigator(ip=destination)
+    navigator.trace_packet_route()
+    Renderer(navigator=navigator)
+
+
+@app.command()
+def classify_topology(destination: str):
+    from netscanner.ip.navigator import Navigator
+
+    navigator = Navigator(ip=destination)
+    navigator.abuse_ip_classification_on_network_topology()
+    Renderer(navigator=navigator)
 
 
 @app.command()

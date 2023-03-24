@@ -22,7 +22,6 @@ typer = "0.7.0"
 urllib3 = "1.26.15"
 pymongo = "^4.3.3"
 
-
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"

@@ -2,12 +2,11 @@ import logging
 import os
 import re
 import socket
-import time
 from datetime import datetime
 
-from rich import print as pprint
 from rich.console import Group
 from rich.panel import Panel
+from netscanner.ip import console
 
 logging.getLogger("scapy").setLevel(logging.ERROR)
 
@@ -65,7 +64,7 @@ class Sniffer:
                 "Not enough permissions to run this sniffer use as root"
             )
 
-        pprint("[cyan]Initializing Parameters...")
+        console.print("[cyan]Initializing Parameters...")
 
         self.verbose = verbose
         self.send_request = send_request
@@ -78,7 +77,11 @@ class Sniffer:
         self.packets = []
         self.packet_count = 0
 
-        pprint("[cyan]Parameters initialized.")
+        console.print("[cyan]Parameters initialized.")
+        self.observe()
+
+    def get_packets(self) -> list:
+        return self.packets
 
     def questions_from_sniff(self, extra_questions: list | None) -> list[str]:
         """Get questions and extra details for IP packet."""
@@ -130,7 +133,7 @@ class Sniffer:
 
             panel_group = Group(*panels)
 
-            pprint(
+            console.print(
                 Panel(
                     panel_group,
                     title=f"[red]Packet Information Packet Count: {self.packet_count}",
@@ -140,13 +143,15 @@ class Sniffer:
 
     def send_network_request(self, src: str) -> None:
         """Sends http request to the specified sRC"""
-        pprint(f"\n[cyan]Sending Request To [bold green]{src}", end="\n\n")
+        console.print(f"\n[cyan]Sending Request To [bold green]{src}", end="\n\n")
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         sock.connect((src, 80))
 
     def observe(self) -> None:
         if not self.sniff_count or not self.send_request:
-            pprint("[italic]Actively Sniffing Press Ctrl + C to exit", end="\n\n")
+            console.print(
+                "[italic]Actively Sniffing Press Ctrl + C to exit", end="\n\n"
+            )
 
         # Using filters as Specified by BPF (https://en.wikipedia.org/wiki/Berkeley_Packet_Filter)
 
@@ -165,7 +170,7 @@ class Sniffer:
         if not self.sniff_count:
             try:
                 while True:
-                    time.sleep(1)
+                    ...
 
             except KeyboardInterrupt:
                 sniffer.stop()
@@ -175,4 +180,4 @@ class Sniffer:
 
 
 if __name__ == "__main__":
-    Sniffer(extra_questions=["route"], bp_filters="ip").observe()
+    Sniffer(extra_questions=["route"], bp_filters="ip")

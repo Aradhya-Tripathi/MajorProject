@@ -195,30 +195,6 @@ files = [
 ]
 
 [[package]]
-name = "motor"
-version = "3.1.1"
-description = "Non-blocking MongoDB driver for Tornado or asyncio"
-category = "main"
-optional = false
-python-versions = ">=3.7"
-files = [
-    {file = "motor-3.1.1-py3-none-any.whl", hash = "sha256:01d93d7c512810dcd85f4d634a7244ba42ff6be7340c869791fe793561e734da"},
-    {file = "motor-3.1.1.tar.gz", hash = "sha256:a4bdadf8a08ebb186ba16e557ba432aa867f689a42b80f2e9f8b24bbb1604742"},
-]
-
-[package.dependencies]
-pymongo = ">=4.1,<5"
-
-[package.extras]
-aws = ["pymongo[aws] (>=4.1,<5)"]
-encryption = ["pymongo[encryption] (>=4.1,<5)"]
-gssapi = ["pymongo[gssapi] (>=4.1,<5)"]
-ocsp = ["pymongo[ocsp] (>=4.1,<5)"]
-snappy = ["pymongo[snappy] (>=4.1,<5)"]
-srv = ["pymongo[srv] (>=4.1,<5)"]
-zstd = ["pymongo[zstd] (>=4.1,<5)"]
-
-[[package]]
 name = "pygments"
 version = "2.14.0"
 description = "Pygments is a syntax highlighting package written in Python."
@@ -426,4 +402,4 @@ socks = ["PySocks (>=1.5.6,!=1.5.7,<2.0)"]
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.10"
-content-hash = "76bd427b5e8123adf6774017e4b69895cb64eee4bd8d92f7c223a5263ff7c176"
+content-hash = "1e27c4e701a2c1cc9011cd401265b4a2f77d7bb5b549f87d1bbeeaf063c17a1d"
