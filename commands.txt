@@ -10,7 +10,7 @@ sudo netscanner classify 103.146.202.146
 sudo netscanner classify 20.207.73.82
 
 # Trace route
-sudo netscanner traceroute 103.146.202.146
+# sudo netscanner traceroute 103.146.202.146
 
 # Classify Topology
-sudo netscanner classify-topology 103.146.202.146
+# sudo netscanner classify-topology 103.146.202.146

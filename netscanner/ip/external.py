@@ -6,7 +6,7 @@ import pymongo
 import requests
 from rich.progress import track
 
-from netscanner.ip import console
+from renderer import console
 from netscanner.utils import load_env
 
 load_env()
@@ -30,7 +30,7 @@ def primary_details_source(ip_list: list[str]) -> dict[str, str]:
 
     for ip in track(
         ip_list,
-        description="[cyan]Looking up details...",
+        description="[cyan]Querying location databases...",
         console=console,
         show_speed=False,
         transient=False,
@@ -48,12 +48,12 @@ def primary_details_source(ip_list: list[str]) -> dict[str, str]:
                 "region_name": 1,
                 "latitude": 1,
                 "longitude": 1,
+                "zip_code": "$field8",
             },
         )
         if not answer:
             unanswered.append(ip)
         else:
-            # Renaming dictionary keys for uniformity.
             intermediate_node_details[ip] = answer
 
     if unanswered:

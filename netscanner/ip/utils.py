@@ -1,7 +1,24 @@
 import shlex
+import socket
 import subprocess
 
-from netscanner.ip import console
+from renderer import console
+
+
+QUESTIONS = [
+    "dst",
+    "src",
+    "ttl",
+    "proto",
+    "chksum",
+    "seq",
+    "ack",
+    "urgptr",
+    "sport",
+    "dport",
+    "time",
+    "payload",
+]
 
 
 def private_ip():
@@ -32,10 +49,15 @@ def public_ip(show: bool = True) -> str:
     return ip
 
 
-def trackcalls(func):
-    def inner(*args, **kwargs):
-        inner.has_been_called = True
-        return func(*args, **kwargs)
+def proto_lookup() -> dict[int, str]:
+    """
+    Returns the protocal associated with it's corresponding protocal number according to IANA.
+    """
+    lookup = {}
+    prefix = "IPPROTO_"
 
-    inner.has_been_called = False
-    return inner
+    for proto, number in vars(socket).items():
+        if proto.startswith(prefix):
+            lookup[number] = proto[len(prefix) :]
+
+    return lookup

@@ -1,41 +1,14 @@
 import logging
 import os
-import re
 import socket
-from datetime import datetime
 
-from rich.console import Group
-from rich.panel import Panel
-from netscanner.ip import console
+from netscanner.ip.utils import QUESTIONS, proto_lookup
+from netscanner.utils import get_src, convert_unix_timestamp
+from renderer import console, render_sniffed_packets
 
 logging.getLogger("scapy").setLevel(logging.ERROR)
 
 from scapy import all
-
-SRC_PATTERN = re.compile(r"\bsrc\b\s+(\S+)")
-QUESTIONS = [
-    "dst",
-    "src",
-    "ttl",
-    "proto",
-    "chksum",
-    "seq",
-    "ack",
-    "urgptr",
-    "sport",
-    "dport",
-    "time",
-    "payload",
-]
-
-
-def convert_unix_timestamp(timestamp: float) -> str:
-    return datetime.utcfromtimestamp(timestamp).strftime("%Y-%m-%d %H:%M:%S")
-
-
-def get_src(bp_filters: str) -> str:
-    if ip := SRC_PATTERN.findall(bp_filters):
-        return ip[0]
 
 
 class Sniffer:
@@ -58,7 +31,6 @@ class Sniffer:
         verbose: bool = True,
         send_request: bool = False,
     ):
-
         if os.getuid() != 0:
             raise PermissionError(
                 "Not enough permissions to run this sniffer use as root"
@@ -73,72 +45,52 @@ class Sniffer:
         extra_questions = extra_questions if extra_questions else []
 
         self.questions = self.questions_from_sniff(extra_questions=extra_questions)
-        self.proto_lookup_table = self.proto_lookup()
+        self.proto_lookup_table = proto_lookup()
         self.packets = []
         self.packet_count = 0
 
         console.print("[cyan]Parameters initialized.")
         self.observe()
 
-    def get_packets(self) -> list:
-        return self.packets
-
     def questions_from_sniff(self, extra_questions: list | None) -> list[str]:
         """Get questions and extra details for IP packet."""
         QUESTIONS.extend(extra_questions if extra_questions else [])
         return QUESTIONS
 
-    def proto_lookup(self) -> dict[int, str]:
-        """
-        Returns the protocal associated with it's corresponding protocal number according to IANA.
-        """
-        lookup = {}
-        prefix = "IPPROTO_"
-
-        for proto, number in vars(socket).items():
-            if proto.startswith(prefix):
-                lookup[number] = proto[len(prefix) :]
-
-        return lookup
-
     def prn(self, packet: all.Packet) -> None:
-        question_and_answers = {}
-        panels = []
         self.packets.append(packet)
         self.packet_count += 1
 
-        for question in self.questions:
-            try:
-                if question == "proto":
-                    question_and_answers[question] = self.proto_lookup_table[
-                        getattr(packet[all.IP], question)
-                    ]
-
-                elif question == "time":
-                    question_and_answers[question] = convert_unix_timestamp(
-                        getattr(packet[all.IP], question)
-                    )
-
-                elif question == "route":
-                    question_and_answers[question] = getattr(packet[all.IP], question)()
-
-                else:
-                    question_and_answers[question] = getattr(packet[all.IP], question)
-            except (IndexError, AttributeError) as e:
-                panels.append((f"[red]Error: {e}; {packet}"))
-
         if self.verbose:
-            for k, v in question_and_answers.items():
-                panels.append(f"[cyan]{k}: [green]{v}")
+            question_and_answers = {}
 
-            panel_group = Group(*panels)
+            for question in self.questions:
+                try:
+                    if question == "proto":
+                        question_and_answers[question] = self.proto_lookup_table[
+                            getattr(packet[all.IP], question)
+                        ]
 
-            console.print(
-                Panel(
-                    panel_group,
-                    title=f"[red]Packet Information Packet Count: {self.packet_count}",
-                    subtitle=f"[red]End Of Information Packet Count: {self.packet_count}",
-                )
+                    elif question == "time":
+                        question_and_answers[question] = convert_unix_timestamp(
+                            getattr(packet[all.IP], question)
+                        )
+
+                    elif question == "route":
+                        question_and_answers[question] = getattr(
+                            packet[all.IP], question
+                        )()
+
+                    else:
+                        question_and_answers[question] = getattr(
+                            packet[all.IP], question
+                        )
+                except (IndexError, AttributeError) as e:
+                    console.print("Invalid packet!", style="bold red")
+
+            render_sniffed_packets(
+                question_and_answers=question_and_answers,
+                packet_count=self.packet_count,
             )
 
     def send_network_request(self, src: str) -> None:

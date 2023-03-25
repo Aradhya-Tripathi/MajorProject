@@ -2,32 +2,23 @@ import socket
 
 from scapy import all as modules
 
-from netscanner.ip import console
 from netscanner.ip.external import abuse, primary_details_source
-from netscanner.ip.utils import public_ip, trackcalls
+from renderer import console
+from netscanner.ip.utils import public_ip
 
 
 class Navigator:
-    __slots__ = (
-        "intermediate_node_details",
-        "packets",
-        "classification_result",
-        "ip",
-        "packets",
-    )
-
     def __init__(self, ip: str) -> None:
         self.ip = ip
-        self.packets = []
 
-    @trackcalls
-    def trace_packet_route(self) -> None:
+    def trace_packet_route(self) -> tuple[dict[str:str], list]:
         """Perform a tcp syn flag trace, aquires intermediate route IPs,
         utilizing external API for IP geo location returns dict of location and IP details.
         """
         with console.status(
-            f"[cyan]Packets being transfered to [bold]{self.ip}...",
+            f"Packets being transfered to [bold]{self.ip}...",
             spinner="bouncingBall",
+            spinner_style="cyan",
         ):
             ans, _ = modules.sr(
                 modules.IP(dst=self.ip, ttl=(1, 30)) / modules.TCP(flags="S"),
@@ -38,7 +29,7 @@ class Navigator:
             )
         # Here we want to look at the recieved packet's source IP address as that will
         # tell us the IP address of the router which sent the packet.
-        self.packets = [received_packet for _, received_packet in ans]
+        packets = [received_packet for _, received_packet in ans]
         intermediate_node_addresses = [received.src for _, received in ans]
         # Reduce list for plotting and ease of api calls.
         # After the destination is reached we terminate the list.
@@ -50,46 +41,49 @@ class Navigator:
             raise ConnectionError(f"Packet failed to reach {self.ip}")
 
         intermediate_node_addresses[0] = public_ip(show=False)
-        self.intermediate_node_details = primary_details_source(
+        intermediate_node_details = primary_details_source(
             ip_list=intermediate_node_addresses
         )
+        return intermediate_node_details, packets
 
-    @trackcalls
-    def abuse_ip_classification_on_single_address(self):
+    def abuse_ip_classification_on_single_address(self) -> dict[str, str]:
         console.print("\n\nClassifying packets using the AbuseIP...\n\n", style="cyan")
-        self.classification_result = abuse(self.ip).get("data", None)
-        if not self.classification_result:
+        classification_result = abuse(self.ip).get("data")
+        if not classification_result:
             raise Exception(
                 f"Details about this Ip address {self.ip} not found in the database!"
             )
 
-    @trackcalls
-    def abuse_ip_classification_on_network_topology(self):
-        """
-        Using threading to send classification requests.
-        """
-        self.trace_packet_route()
+        return classification_result
+
+    def abuse_ip_classification_on_network_topology(self) -> dict[str, str]:
+        """Using threading to send bulk classification requests."""
         from concurrent.futures import ThreadPoolExecutor
+
+        intermediate_node_details, _ = self.trace_packet_route()
 
         def _classify(ip: str):
             return abuse(ip).get("data")
 
-        packet_srcs = [packet.src for packet in self.packets]
-        packet_srcs[0] = public_ip(show=False)
+        packet_srcs = list(intermediate_node_details.keys())
         with console.status(
             "[cyan]Classifying intermediate nodes using AbuseIP...", spinner="earth"
         ):
             with ThreadPoolExecutor() as executor:
                 results = executor.map(_classify, packet_srcs)
 
+        # Update existing results in intermediate node details fetched internally/externally,
+        # with the classification from abuse IP.
         for idx, result in enumerate(results, start=0):
-            self.intermediate_node_details[packet_srcs[idx]].update(
+            intermediate_node_details[packet_srcs[idx]].update(
                 {
                     "Classification": "Safe"
                     if result["abuseConfidenceScore"] < 50
                     else "Unsafe"
                 }
             )
+
+        return intermediate_node_details
 
 
 if __name__ == "__main__":
