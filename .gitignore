@@ -5,3 +5,4 @@ __pycache__
 dbip*
 .DS_*
 .vscode/
+node_modules
