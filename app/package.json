@@ -1,0 +1,12 @@
+{
+  "name": "app",
+  "version": "1.0.0",
+  "description": "Interactive environment for netscanner.",
+  "main": "main.js",
+  "author": "Aradhya Tripathi",
+  "license": "MIT",
+  "dependencies": {
+    "electron": "^23.2.0",
+    "python-shell": "^5.0.0"
+  }
+}
