@@ -1,8 +1,5 @@
-import logging
-
 import typer
 
-logging.getLogger("scapy").setLevel(logging.ERROR)
 from renderer import render_classification_panel, render_table_with_details
 
 app = typer.Typer()
