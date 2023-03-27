@@ -1,3 +1,5 @@
+from functools import lru_cache
+
 import typer
 
 from renderer import render_classification_panel, render_table_with_details
@@ -33,6 +35,7 @@ def sniff(
 ######################## IP action commands ########################
 
 
+@lru_cache(maxsize=512)
 @app.command()
 def classify(request_to: str):
     from netscanner.ip.navigator import Navigator

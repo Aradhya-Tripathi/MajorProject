@@ -1,15 +1,33 @@
+import ipaddress
 import socket
 
 from scapy import all as modules
 
 from netscanner.ip.external import abuse, primary_details_source
-from renderer import console
 from netscanner.ip.utils import public_ip
+from renderer import console
 
 
 class Navigator:
+    """
+    Currently all APIs only support iPv4.
+    """
+
     def __init__(self, ip: str) -> None:
-        self.ip = ip
+        self.ip = self.get_ip_address(ip=ip)
+
+    def get_ip_address(self, ip: str) -> str:
+        try:
+            ip = ipaddress.IPv4Address(socket.gethostbyname(ip))
+        except (ipaddress.AddressValueError, socket.gaierror):
+            raise ConnectionError(f"Invalid IP address or domain name: {ip}")
+
+        if ip.is_loopback or not ip.is_global:
+            raise Exception(
+                "Please enter a global IP address and not a loopback address"
+            )
+
+        return str(ip)
 
     def trace_packet_route(self) -> tuple[dict[str:str], list]:
         """Perform a tcp syn flag trace, aquires intermediate route IPs,

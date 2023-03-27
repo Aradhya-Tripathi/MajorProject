@@ -1,11 +1,24 @@
 import gradio as gr
-from api import classify_ip, traceroute
+from api import classify_ip, traceroute, traceroute_and_classify
 from server_config import init_server
 
-with gr.Blocks(title="Major Project") as main:
+with gr.Blocks(
+    title="Major Project",
+    theme=gr.themes.Monochrome(font=gr.themes.GoogleFont(name="PT Mono")),
+) as main:
     # Main app handler uses FastAPI under the hood.
     main.show_api = False
-    main.show_error = False
+    main.show_error = True
+
+    traceroute_headers = [
+        "IP Address",
+        "Country",
+        "Region",
+        "City",
+        "Latitude",
+        "Longitude",
+        "Zip Code",
+    ]
 
     gr.Markdown(
         """
@@ -22,6 +35,7 @@ with gr.Blocks(title="Major Project") as main:
         )
         classification_results = gr.DataFrame(
             headers=[
+                "IP Address",
                 "Confidance Score",
                 "Country",
                 "Internet service provider",
@@ -30,7 +44,9 @@ with gr.Blocks(title="Major Project") as main:
         )
         classify_button = gr.Button("Classify IP Address")
         classify_button.click(
-            classify_ip, inputs=ip_address, outputs=classification_results
+            classify_ip,
+            inputs=ip_address,
+            outputs=[classification_results],
         )
 
     with gr.Tab(label="Trace IP packet route"):
@@ -39,13 +55,29 @@ with gr.Blocks(title="Major Project") as main:
             placeholder="Enter a destination IP to trace route.",
         )
 
-        traceroute_results = gr.DataFrame(
-            headers=["Country", "Region", "City", "Latitude", "Longitude", "Zip Code"],
-        )
-
+        traceroute_results = gr.DataFrame(headers=traceroute_headers)
         traceroute_button = gr.Button("Traceroute")
         traceroute_button.click(
-            traceroute, inputs=destination_ip, outputs=traceroute_results
+            traceroute,
+            inputs=destination_ip,
+            outputs=traceroute_results,
         )
 
-init_server(app=main)
+    with gr.Tab(label="Trace IP packet route and classify nodes"):
+        destination_ip = gr.Textbox(
+            label="Destination IP Address",
+            placeholder="Enter a destination IP to trace route.",
+        )
+
+        traceroute_headers.append("Classification")
+        traceroute_and_classify_results = gr.DataFrame(headers=traceroute_headers)
+        traceroute_and_classify_button = gr.Button("Traceroute and Classify")
+        traceroute_and_classify_button.click(
+            traceroute_and_classify,
+            inputs=destination_ip,
+            outputs=traceroute_and_classify_results,
+        )
+
+
+if __name__ == "__main__":
+    init_server(app=main)

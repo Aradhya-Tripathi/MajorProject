@@ -6,10 +6,10 @@ from pathlib import Path
 SRC_PATTERN = re.compile(r"\bsrc\b\s+(\S+)")
 
 
-def load_env(root_path: str = "./netscanner/.env"):
+def load_env(root_path: str = None):
     # Decent alternative for load env (excess deps)
     root_path = (
-        os.path.join(Path(__file__).parent.parent.resolve(), ".env")
+        os.path.join(Path(__file__).parent.resolve(), ".env")
         if not root_path
         else root_path
     )

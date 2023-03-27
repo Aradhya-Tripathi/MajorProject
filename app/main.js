@@ -1,10 +1,16 @@
 const { app, BrowserWindow, session } = require("electron");
-const path = require("path");
-const { PythonShell } = require("python-shell");
+const { spawn } = require("child_process");
 
 let mainWindow;
 
-function createWindow() {
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function createWindow() {
+  const server = spawn("python", ["./server/main.py"]);
+  await sleep(5000);
+
   mainWindow = new BrowserWindow({
     width: 800,
     height: 600,
@@ -14,21 +20,10 @@ function createWindow() {
   });
   mainWindow.loadURL("http://localhost:8080");
   mainWindow.on("closed", function () {
+    server.kill();
     mainWindow = null;
   });
 
-  // To run python script from electron app
-  // Will probably be useful during packaging and
-  // distribution.
-  // const options = {
-  //   mode: 'text',
-  //   pythonPath: 'python',
-  //   scriptPath: path.join(__dirname, 'dash_app'),
-  // }
-  // PythonShell.run('main.py', options, function (err, results) {
-  //   if (err) throw err
-  //   console.log('Python script finished.')
-  // })
   session.defaultSession.webRequest.onBeforeSendHeaders((details, callback) => {
     details.requestHeaders["X-Custom-Header"] =
       "This will be replaced by an external API call most likey";
