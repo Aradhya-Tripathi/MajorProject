@@ -8,12 +8,13 @@ function sleep(ms) {
 }
 
 async function createWindow() {
-  const server = spawn("python", ["./server/main.py"]);
+  const secretKey = "Secret";
+  const server = spawn("python", ["./server/main.py", secretKey]);
   await sleep(5000);
 
   mainWindow = new BrowserWindow({
-    width: 800,
-    height: 600,
+    width: 1000,
+    height: 700,
     webPreferences: {
       nodeIntegration: false,
     },
@@ -25,8 +26,7 @@ async function createWindow() {
   });
 
   session.defaultSession.webRequest.onBeforeSendHeaders((details, callback) => {
-    details.requestHeaders["X-Custom-Header"] =
-      "This will be replaced by an external API call most likey";
+    details.requestHeaders["X-Custom-Header"] = secretKey;
     callback({ cancel: false, requestHeaders: details.requestHeaders });
   });
 }

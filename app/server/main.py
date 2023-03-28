@@ -4,7 +4,7 @@ from server_config import init_server
 
 with gr.Blocks(
     title="Major Project",
-    theme=gr.themes.Monochrome(font=gr.themes.GoogleFont(name="PT Mono")),
+    theme=gr.themes.Soft(),
 ) as main:
     # Main app handler uses FastAPI under the hood.
     main.show_api = False
@@ -78,6 +78,19 @@ with gr.Blocks(
             outputs=traceroute_and_classify_results,
         )
 
+    with gr.Tab(label="Network traffic classification"):
+        sniff_count = gr.Number(
+            label="Sniff count",
+            placeholder="Number of packets to transfer.",
+        )
+
 
 if __name__ == "__main__":
-    init_server(app=main)
+    import sys
+
+    try:
+        secret_key = sys.argv[1]
+    except IndexError:
+        raise Exception("Enter secret key")
+
+    init_server(app=main, secret_key=secret_key)

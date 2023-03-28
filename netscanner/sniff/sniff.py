@@ -2,13 +2,13 @@ import logging
 import os
 import socket
 
-from netscanner.ip.utils import QUESTIONS, proto_lookup
-from netscanner.utils import get_src, convert_unix_timestamp
+from netscanner.ip.utils import QUESTIONS, private_ip, proto_lookup
+from netscanner.utils import convert_unix_timestamp, get_src
 from renderer import console, render_sniffed_packets
 
 logging.getLogger("scapy").setLevel(logging.ERROR)
 
-from scapy import all
+from scapy import all as modules
 
 
 class Sniffer:
@@ -21,6 +21,7 @@ class Sniffer:
         "verbose",
         "packet_count",
         "send_request",
+        "only_inbound",
     )
 
     def __init__(
@@ -30,6 +31,7 @@ class Sniffer:
         extra_questions: list | None = None,
         verbose: bool = True,
         send_request: bool = False,
+        only_inbound: bool = False,
     ):
         if os.getuid() != 0:
             raise PermissionError(
@@ -42,6 +44,7 @@ class Sniffer:
         self.send_request = send_request
         self.bp_filters = bp_filters if bp_filters else ""
         self.sniff_count = sniff_count
+        self.only_inbound = only_inbound
         extra_questions = extra_questions if extra_questions else []
 
         self.questions = self.questions_from_sniff(extra_questions=extra_questions)
@@ -52,12 +55,15 @@ class Sniffer:
         console.print("[cyan]Parameters initialized.")
         self.observe()
 
+    def get_packets(self) -> list[modules.Packet]:
+        return self.packets
+
     def questions_from_sniff(self, extra_questions: list | None) -> list[str]:
         """Get questions and extra details for IP packet."""
         QUESTIONS.extend(extra_questions if extra_questions else [])
         return QUESTIONS
 
-    def prn(self, packet: all.Packet) -> None:
+    def prn(self, packet: modules.Packet) -> None:
         self.packets.append(packet)
         self.packet_count += 1
 
@@ -68,22 +74,22 @@ class Sniffer:
                 try:
                     if question == "proto":
                         question_and_answers[question] = self.proto_lookup_table[
-                            getattr(packet[all.IP], question)
+                            getattr(packet[modules.IP], question)
                         ]
 
                     elif question == "time":
                         question_and_answers[question] = convert_unix_timestamp(
-                            getattr(packet[all.IP], question)
+                            getattr(packet[modules.IP], question)
                         )
 
                     elif question == "route":
                         question_and_answers[question] = getattr(
-                            packet[all.IP], question
+                            packet[modules.IP], question
                         )()
 
                     else:
                         question_and_answers[question] = getattr(
-                            packet[all.IP], question
+                            packet[modules.IP], question
                         )
                 except (IndexError, AttributeError) as e:
                     console.print("Invalid packet!", style="bold red")
@@ -100,14 +106,20 @@ class Sniffer:
         sock.connect((src, 80))
 
     def observe(self) -> None:
+        if self.only_inbound:
+            private_address = private_ip(verbose=self.verbose)
+            inbound_filter = (
+                f"dst host {private_address} and not src host {private_address}"
+            )
+            self.bp_filters = inbound_filter + " and " + self.bp_filters
+
         if not self.sniff_count or not self.send_request:
             console.print(
                 "[italic]Actively Sniffing Press Ctrl + C to exit", end="\n\n"
             )
 
         # Using filters as Specified by BPF (https://en.wikipedia.org/wiki/Berkeley_Packet_Filter)
-
-        sniffer = all.AsyncSniffer(
+        sniffer = modules.AsyncSniffer(
             prn=self.prn,
             filter=self.bp_filters if self.bp_filters else None,
             count=self.sniff_count,

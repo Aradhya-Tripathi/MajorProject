@@ -1,11 +1,78 @@
 # Handled of all final output render.
 import random
+import typing
 
 from rich.console import Console, Group
 from rich.panel import Panel
+from rich.status import Status
 from rich.table import Table
 
-console = Console()
+if typing.TYPE_CHECKING:
+    from rich.console import RenderableType
+    from rich.style import StyleType
+
+
+class AdaptiveStatus(Status):
+    """Status needs a context wrapper thus initialized new class for it."""
+
+    def __init__(
+        self,
+        status: "RenderableType",
+        *,
+        console: typing.Optional[Console] = None,
+        spinner: str = "dots",
+        spinner_style: "StyleType" = "status.spinner",
+        speed: float = 1,
+        refresh_per_second: float = 12.5,
+        verbose: bool = True,
+    ):
+        self.verbose = verbose
+        super().__init__(
+            status,
+            console=console,
+            spinner=spinner,
+            spinner_style=spinner_style,
+            speed=speed,
+            refresh_per_second=refresh_per_second,
+        )
+
+    def __enter__(self) -> "Status":
+        if self.verbose:
+            super().__enter__()
+            return self
+
+    def __exit__(self, *args, **kwargs) -> None:
+        if self.verbose:
+            super().__exit__(*args, **kwargs)
+
+
+class AdaptiveConsole(Console):
+    def status(
+        self,
+        status: "RenderableType",
+        *,
+        spinner: str = "dots",
+        spinner_style: "StyleType" = "status.spinner",
+        speed: float = 1,
+        refresh_per_second: float = 12.5,
+        verbose: bool = True,
+    ) -> "Status":
+        return AdaptiveStatus(
+            status,
+            verbose=verbose,
+            spinner=spinner,
+            spinner_style=spinner_style,
+            speed=speed,
+            refresh_per_second=refresh_per_second,
+        )
+
+    def print(self, *args, **kwargs) -> None:
+        """As print requires no special approach simply using this."""
+        if kwargs.pop("verbose", True):
+            return super().print(*args, **kwargs)
+
+
+console = AdaptiveConsole()
 
 
 def render_packet_travle_map() -> None:
@@ -77,4 +144,22 @@ def render_sniffed_packets(question_and_answers: dict[str, str], packet_count: i
             title=f"[red]Packet Information Packet Count: {packet_count}",
             subtitle=f"[red]End Of Information Packet Count: {packet_count}",
         )
+    )
+
+
+def render_network_classification(intermediate_node_details: dict[str, str]) -> None:
+    unwanteds = [
+        "ipVersion",
+        "hostnames",
+        "numDistinctUsers",
+        "lastReportedAt",
+        "totalReports",
+        "isWhitelisted",
+    ]
+    for value in intermediate_node_details.values():
+        for unwanted in unwanteds:
+            del value[unwanted]
+
+    render_table_with_details(
+        intermediate_node_details=intermediate_node_details,
     )

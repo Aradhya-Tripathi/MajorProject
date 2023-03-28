@@ -6,7 +6,7 @@ from netscanner.ip.navigator import Navigator
 @lru_cache(maxsize=512)
 def classify_ip(ip_address: str):
     navigator = Navigator(ip=ip_address)
-    classification_result = navigator.abuse_ip_classification_on_single_address()
+    classification_result = navigator.abuse_ip_address_classification()
     score = classification_result["abuseConfidenceScore"]
 
     return [
@@ -38,5 +38,9 @@ def traceroute(destination_ip: str):
 
 def traceroute_and_classify(destination_ip: str):
     navigator = Navigator(ip=destination_ip)
-    route_details = navigator.abuse_ip_classification_on_network_topology()
+    route_details = navigator.abuse_ip_intermediate_node_classification()
     return render_traceroute_df(route_details=route_details)
+
+
+def network_traffic_classification(sniff_count: int):
+    ...

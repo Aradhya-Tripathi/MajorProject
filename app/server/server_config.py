@@ -21,6 +21,7 @@ def check_socket(host, port):
 
 def init_server(
     app: "Blocks",
+    secret_key: str,
     host: str = "0.0.0.0",
     port: int = 8080,
     debug: bool = False,
@@ -35,10 +36,7 @@ def init_server(
 
     @app.middleware("http")
     async def _(request: "Request", call_next):
-        if (
-            "This will be replaced by an external API call most likey"
-            not in request.headers.get("x-custom-header", "")
-        ):
+        if secret_key != request.headers.get("x-custom-header", ""):
             return HTMLResponse(content="<H1>Permission Denied<H1>", status_code=403)
         response = await call_next(request)
         return response
@@ -47,7 +45,6 @@ def init_server(
         app=app,
         host=host,
         port=port,
-        reload_delay=5,
         log_level=10 if debug else 50,
     )
     server = Server(config=config)

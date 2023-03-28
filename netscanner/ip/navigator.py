@@ -3,8 +3,10 @@ import socket
 
 from scapy import all as modules
 
-from netscanner.ip.external import abuse, primary_details_source
+from netscanner.ip.classification.abuseip_classification import AbuseIPClassification
+from netscanner.ip.model.data import primary_details_source
 from netscanner.ip.utils import public_ip
+from netscanner.sniff.sniff import Sniffer
 from renderer import console
 
 
@@ -13,8 +15,10 @@ class Navigator:
     Currently all APIs only support iPv4.
     """
 
-    def __init__(self, ip: str) -> None:
-        self.ip = self.get_ip_address(ip=ip)
+    def __init__(self, ip: str = None, verbose: bool = False) -> None:
+        if ip:
+            self.ip = self.get_ip_address(ip=ip)
+        self.verbose = verbose
 
     def get_ip_address(self, ip: str) -> str:
         try:
@@ -37,6 +41,7 @@ class Navigator:
             f"Packets being transfered to [bold]{self.ip}...",
             spinner="bouncingBall",
             spinner_style="cyan",
+            verbose=self.verbose,
         ):
             ans, _ = modules.sr(
                 modules.IP(dst=self.ip, ttl=(1, 30)) / modules.TCP(flags="S"),
@@ -64,45 +69,81 @@ class Navigator:
         )
         return intermediate_node_details, packets
 
-    def abuse_ip_classification_on_single_address(self) -> dict[str, str]:
-        console.print("\n\nClassifying packets using the AbuseIP...\n\n", style="cyan")
-        classification_result = abuse(self.ip).get("data")
-        if not classification_result:
-            raise Exception(
-                f"Details about this Ip address {self.ip} not found in the database!"
-            )
+    def abuse_ip_address_classification(self) -> dict[str, str]:
+        console.print(
+            "\n\nClassifying packets using the AbuseIP...\n\n",
+            style="cyan",
+            verbose=self.verbose,
+        )
+        return AbuseIPClassification(address=self.ip).report()
 
-        return classification_result
-
-    def abuse_ip_classification_on_network_topology(self) -> dict[str, str]:
-        """Using threading to send bulk classification requests."""
-        from concurrent.futures import ThreadPoolExecutor
-
+    def abuse_ip_intermediate_node_classification(self) -> dict[str, str]:
+        """Classifies individual intermediate node's when tracing packet route.
+        Using threading to send bulk classification requests."""
         intermediate_node_details, _ = self.trace_packet_route()
-
-        def _classify(ip: str):
-            return abuse(ip).get("data")
-
         packet_srcs = list(intermediate_node_details.keys())
+
         with console.status(
-            "[cyan]Classifying intermediate nodes using AbuseIP...", spinner="earth"
+            "[cyan]Classifying intermediate nodes using AbuseIP...",
+            spinner="earth",
+            verbose=self.verbose,
         ):
-            with ThreadPoolExecutor() as executor:
-                results = executor.map(_classify, packet_srcs)
+            results = AbuseIPClassification(address=packet_srcs).report()
 
         # Update existing results in intermediate node details fetched internally/externally,
         # with the classification from abuse IP.
         for idx, result in enumerate(results, start=0):
             intermediate_node_details[packet_srcs[idx]].update(
                 {
-                    "Classification": "Safe"
+                    "Classification": f"Safe {result['abuseConfidenceScore']}"
                     if result["abuseConfidenceScore"] < 50
-                    else "Unsafe"
+                    else f"Unsafe {result['abuseConfidenceScore']}"
                 }
             )
 
         return intermediate_node_details
 
+    def abuse_ip_sniff_and_classify(
+        self, connection_type: str = "tcp", sniff_count: int = 10
+    ) -> dict[str, dict[str, str]]:
+        classified_packets = {}
+
+        sniffer = Sniffer(
+            sniff_count=sniff_count,
+            bp_filters=connection_type,
+            verbose=self.verbose,
+            only_inbound=True,
+        )
+
+        packets = sniffer.get_packets()
+        packet_srcs = [packet[modules.IP].src for packet in packets]
+
+        if sniff_count == 1:
+            packet_srcs = packet_srcs[0]
+
+        # Removes all duplicate packets (don't want to spam the api)
+        console.print(
+            "Removing all duplicate IP addresses",
+            style="red on gray0",
+            verbose=self.verbose,
+        )
+        packet_srcs = set(packet_srcs)
+
+        with console.status(
+            f"[cyan]Classifying {len(packet_srcs)} inbound packets using AbuseIP...",
+            spinner="earth",
+            verbose=self.verbose,
+        ):
+            results = AbuseIPClassification(address=packet_srcs).report()
+
+        if isinstance(results, dict):
+            return {results.pop("ipAddress"): results}
+
+        for result in results:
+            classified_packets[result.pop("ipAddress")] = result
+
+        return classified_packets
+
 
 if __name__ == "__main__":
-    Navigator("103.146.202.146").abuse_ip_classification_on_network_topology()
+    Navigator("facebook.com").abuse_ip_address_classification()
