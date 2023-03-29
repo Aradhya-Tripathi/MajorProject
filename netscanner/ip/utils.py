@@ -19,6 +19,15 @@ QUESTIONS = [
     "payload",
 ]
 
+ABUSEIP_UNWANTED = [
+    "ipVersion",
+    "hostnames",
+    "numDistinctUsers",
+    "lastReportedAt",
+    "totalReports",
+    "isWhitelisted",
+]
+
 
 def private_ip(verbose: bool = True):
     """Returns current networks private IP"""

@@ -8,21 +8,24 @@ from renderer import (
     render_network_classification,
 )
 
-app = typer.Typer()
-VERBOSE = True
+app = typer.Typer(no_args_is_help=True)
+utility = typer.Typer()
+classify = typer.Typer()
+app.add_typer(utility, name="utils")
+app.add_typer(classify, name="classify")
+
+VERBOSE = False
 ######################## Sniff Command ########################
 
 
-@app.command(
-    name="sniff",
-    epilog="Runs a packet sniffer with the given details and shows packet details",
-)
+@app.command()
 def sniff(
     bp_filters: str = None,
     sniff_count: int = 0,
     extra_questions: str = None,
     send_request: bool = False,
     only_inbound: bool = False,
+    verbose: bool = VERBOSE,
 ):
     from netscanner.sniff.sniff import Sniffer
 
@@ -35,72 +38,74 @@ def sniff(
         extra_questions=extra_questions,
         send_request=send_request,
         only_inbound=only_inbound,
-        verbose=VERBOSE,
+        verbose=verbose,
     )
+
+
+@app.command()
+def traceroute(destination: str, verbose: bool = VERBOSE):
+    from netscanner.ip.navigator import Navigator
+
+    intermediate_node_details, _ = Navigator(
+        ip=destination, verbose=verbose
+    ).trace_packet_route()
+
+    render_table_with_details(intermediate_node_details=intermediate_node_details)
 
 
 ######################## IP action commands ########################
 
 
 @lru_cache(maxsize=512)
-@app.command()
-def ip_address_classification(request_to: str):
+@classify.command()
+def ip_address(request_to: str, verbose: bool = VERBOSE):
     from netscanner.ip.navigator import Navigator
 
     classification_results = Navigator(
-        ip=request_to, verbose=VERBOSE
+        ip=request_to, verbose=verbose
     ).abuse_ip_address_classification()
 
     render_classification_panel(classification_result=classification_results)
 
 
-@app.command()
-def traceroute(destination: str):
-    from netscanner.ip.navigator import Navigator
-
-    intermediate_node_details, _ = Navigator(
-        ip=destination, verbose=VERBOSE
-    ).trace_packet_route()
-
-    render_table_with_details(intermediate_node_details=intermediate_node_details)
-
-
-@app.command()
-def intermediate_node_classification(destination: str):
+@classify.command()
+def intermediate_node(destination: str, verbose: bool = VERBOSE):
     from netscanner.ip.navigator import Navigator
 
     intermediate_node_details = Navigator(
-        ip=destination, verbose=VERBOSE
+        ip=destination, verbose=verbose
     ).abuse_ip_intermediate_node_classification()
 
     render_table_with_details(intermediate_node_details=intermediate_node_details)
 
 
-@app.command()
-def network_traffic_classification(sniff_count: int = 10, connection_type: str = "tcp"):
+@classify.command()
+def network_traffic(
+    sniff_count: int = 10, connection_type: str = "tcp", verbose: bool = VERBOSE
+):
     from netscanner.ip.navigator import Navigator
 
-    classified_packets = Navigator(verbose=False).abuse_ip_sniff_and_classify(
+    classified_packets = Navigator(verbose=verbose).abuse_ip_sniff_and_classify(
         sniff_count=sniff_count, connection_type=connection_type
     )
     render_network_classification(intermediate_node_details=classified_packets)
 
 
-@app.command()
+@utility.command()
 def private_ip():
     from netscanner.ip.utils import private_ip
 
-    private_ip(verbose=VERBOSE)
+    private_ip()
 
 
-@app.command()
+@utility.command()
 def public_ip():
     from netscanner.ip.utils import public_ip
 
     public_ip()
 
 
-@app.command()
+@utility.command()
 def get_ip_address(domain: str):
     from netscanner.ip.navigator import Navigator
 

@@ -147,17 +147,13 @@ def render_sniffed_packets(question_and_answers: dict[str, str], packet_count: i
     )
 
 
-def render_network_classification(intermediate_node_details: dict[str, str]) -> None:
-    unwanteds = [
-        "ipVersion",
-        "hostnames",
-        "numDistinctUsers",
-        "lastReportedAt",
-        "totalReports",
-        "isWhitelisted",
-    ]
+def render_network_classification(
+    intermediate_node_details: dict[str, dict[str, str]]
+) -> None:
+    from netscanner.ip.utils import ABUSEIP_UNWANTED
+
     for value in intermediate_node_details.values():
-        for unwanted in unwanteds:
+        for unwanted in ABUSEIP_UNWANTED:
             del value[unwanted]
 
     render_table_with_details(

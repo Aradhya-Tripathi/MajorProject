@@ -121,16 +121,17 @@ class Navigator:
         if sniff_count == 1:
             packet_srcs = packet_srcs[0]
 
-        # Removes all duplicate packets (don't want to spam the api)
-        console.print(
-            "Removing all duplicate IP addresses",
-            style="red on gray0",
-            verbose=self.verbose,
-        )
-        packet_srcs = set(packet_srcs)
+        else:
+            console.print(
+                "Removing all duplicate IP addresses",
+                style="red on gray0",
+                verbose=self.verbose,
+            )
+            packet_srcs = set(packet_srcs)
 
+        # Removes all duplicate packets (don't want to spam the api)
         with console.status(
-            f"[cyan]Classifying {len(packet_srcs)} inbound packets using AbuseIP...",
+            f"[cyan]Classifying {len(packet_srcs) if isinstance(packet_srcs, list) else 1} inbound packets using AbuseIP...",
             spinner="earth",
             verbose=self.verbose,
         ):

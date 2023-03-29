@@ -37,10 +37,10 @@ class Sniffer:
             raise PermissionError(
                 "Not enough permissions to run this sniffer use as root"
             )
-
-        console.print("[cyan]Initializing Parameters...")
-
         self.verbose = verbose
+
+        console.print("[cyan]Initializing Parameters...", verbose=self.verbose)
+
         self.send_request = send_request
         self.bp_filters = bp_filters if bp_filters else ""
         self.sniff_count = sniff_count
@@ -52,7 +52,7 @@ class Sniffer:
         self.packets = []
         self.packet_count = 0
 
-        console.print("[cyan]Parameters initialized.")
+        console.print("[cyan]Parameters initialized.", self.verbose)
         self.observe()
 
     def get_packets(self) -> list[modules.Packet]:
@@ -101,7 +101,11 @@ class Sniffer:
 
     def send_network_request(self, src: str) -> None:
         """Sends http request to the specified sRC"""
-        console.print(f"\n[cyan]Sending Request To [bold green]{src}", end="\n\n")
+        console.print(
+            f"\n[cyan]Sending Request To [bold green]{src}",
+            end="\n\n",
+            verbose=self.verbose,
+        )
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         sock.connect((src, 80))
 
@@ -111,11 +115,16 @@ class Sniffer:
             inbound_filter = (
                 f"dst host {private_address} and not src host {private_address}"
             )
-            self.bp_filters = inbound_filter + " and " + self.bp_filters
+            if self.bp_filters:
+                self.bp_filters = inbound_filter + " and " + self.bp_filters
+            else:
+                self.bp_filters = inbound_filter
 
         if not self.sniff_count or not self.send_request:
             console.print(
-                "[italic]Actively Sniffing Press Ctrl + C to exit", end="\n\n"
+                "[italic]Actively Sniffing Press Ctrl/Command + C to exit",
+                end="\n\n",
+                verbose=self.verbose,
             )
 
         # Using filters as Specified by BPF (https://en.wikipedia.org/wiki/Berkeley_Packet_Filter)

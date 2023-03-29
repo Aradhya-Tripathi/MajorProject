@@ -4,13 +4,16 @@ sudo netscanner sniff --sniff-count 10
 
 # Classify IPAbuseDB
 # Unsafe IP DEMO
-sudo netscanner ip-address-classification 103.146.202.146
+sudo netscanner classify ip-address 103.146.202.146
 
 # Safe IP DEMO
-sudo netscanner ip-address-classification 20.207.73.82
+sudo netscanner classify ip-address 20.207.73.82
 
 # Trace route
-# sudo netscanner traceroute 103.146.202.146
+sudo netscanner traceroute 65.9.86.80
 
 # Classify Topology
-# sudo netscanner intermediate-node-classification 103.146.202.146
+sudo netscanner classify intermediate-node 65.9.86.80
+
+# Classify as it comes
+sudo netscanner classify network-traffic --sniff-count 5
