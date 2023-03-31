@@ -2,7 +2,7 @@ from functools import lru_cache
 
 import typer
 
-from renderer import (
+from netscanner.renderer import (
     render_classification_panel,
     render_table_with_details,
     render_network_classification,

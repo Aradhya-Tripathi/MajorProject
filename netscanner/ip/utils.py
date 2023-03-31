@@ -2,7 +2,7 @@ import shlex
 import socket
 import subprocess
 
-from renderer import console
+from netscanner.renderer import console
 
 QUESTIONS = [
     "dst",

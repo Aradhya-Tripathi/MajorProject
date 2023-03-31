@@ -7,7 +7,7 @@ from netscanner.ip.classification.abuseip_classification import AbuseIPClassific
 from netscanner.ip.model.data import primary_details_source
 from netscanner.ip.utils import public_ip
 from netscanner.sniff.sniff import Sniffer
-from renderer import console
+from netscanner.renderer import console
 
 
 class Navigator:

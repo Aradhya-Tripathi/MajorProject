@@ -4,7 +4,7 @@ import socket
 
 from netscanner.ip.utils import QUESTIONS, private_ip, proto_lookup
 from netscanner.utils import convert_unix_timestamp, get_src
-from renderer import console, render_sniffed_packets
+from netscanner.renderer import console, render_sniffed_packets
 
 logging.getLogger("scapy").setLevel(logging.ERROR)
 
