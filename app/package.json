@@ -6,7 +6,6 @@
   "author": "Aradhya Tripathi",
   "license": "MIT",
   "dependencies": {
-    "electron": "^23.2.0",
-    "python-shell": "^5.0.0"
+    "electron": "^23.2.1"
   }
 }
