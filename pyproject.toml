@@ -35,10 +35,10 @@ dependencies = [
 dynamic = ["version"]
 
 [tool.hatch.version]
-path = "netscanner/__init__.py"
+path = "cli/__init__.py"
 
 [project.urls]
 Home = "https://github.com/Aradhya-Tripathi/MajorProject"
 
 [project.scripts]
-netscanner = 'netscanner.app:app'
+netscanner = 'cli.app:app'

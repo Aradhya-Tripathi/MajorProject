@@ -2,10 +2,11 @@ from functools import lru_cache
 
 import typer
 
-from netscanner.renderer import (
+from cli.renderer import (
     render_classification_panel,
     render_table_with_details,
     render_network_classification,
+    render_chat_gpt_response,
 )
 
 app = typer.Typer(no_args_is_help=True)
@@ -27,7 +28,7 @@ def sniff(
     only_inbound: bool = False,
     verbose: bool = VERBOSE,
 ):
-    from netscanner.sniff.sniff import Sniffer
+    from src.sniff.sniff import Sniffer
 
     if extra_questions:
         extra_questions = extra_questions.strip().split(",")
@@ -39,12 +40,13 @@ def sniff(
         send_request=send_request,
         only_inbound=only_inbound,
         verbose=verbose,
+        show_packets=True,
     )
 
 
 @app.command()
 def traceroute(destination: str, verbose: bool = VERBOSE):
-    from netscanner.ip.navigator import Navigator
+    from src.ip.navigator import Navigator
 
     intermediate_node_details, _ = Navigator(
         ip=destination, verbose=verbose
@@ -58,8 +60,8 @@ def traceroute(destination: str, verbose: bool = VERBOSE):
 
 @lru_cache(maxsize=512)
 @classify.command()
-def ip_address(request_to: str, verbose: bool = VERBOSE):
-    from netscanner.ip.navigator import Navigator
+def ip_address(request_to: str, verbose: bool = VERBOSE, assess_threat: bool = False):
+    from src.ip.navigator import Navigator
 
     classification_results = Navigator(
         ip=request_to, verbose=verbose
@@ -67,10 +69,23 @@ def ip_address(request_to: str, verbose: bool = VERBOSE):
 
     render_classification_panel(classification_result=classification_results)
 
+    if assess_threat:
+        from gpt.threat import threat_assessment
+
+        assessment = threat_assessment(
+            ip_address=classification_results["ipAddress"],
+            usage=classification_results["usageType"],
+            is_safe=f"unsafe"
+            if classification_results["abuseConfidenceScore"] > 50
+            else f"safe",
+            verbose=verbose,
+        )
+        render_chat_gpt_response(response=assessment)
+
 
 @classify.command()
 def intermediate_node(destination: str, verbose: bool = VERBOSE):
-    from netscanner.ip.navigator import Navigator
+    from src.ip.navigator import Navigator
 
     intermediate_node_details = Navigator(
         ip=destination, verbose=verbose
@@ -83,7 +98,7 @@ def intermediate_node(destination: str, verbose: bool = VERBOSE):
 def network_traffic(
     sniff_count: int = 10, connection_type: str = "tcp", verbose: bool = VERBOSE
 ):
-    from netscanner.ip.navigator import Navigator
+    from src.ip.navigator import Navigator
 
     classified_packets = Navigator(verbose=verbose).abuse_ip_sniff_and_classify(
         sniff_count=sniff_count, connection_type=connection_type
@@ -93,28 +108,28 @@ def network_traffic(
 
 @utility.command()
 def private_ip():
-    from netscanner.ip.utils import private_ip
+    from src.ip.utils import private_ip
 
     private_ip()
 
 
 @utility.command()
 def public_ip():
-    from netscanner.ip.utils import public_ip
+    from src.ip.utils import public_ip
 
     public_ip()
 
 
 @utility.command()
 def get_ip_address(domain: str):
-    from netscanner.ip.navigator import Navigator
+    from src.ip.navigator import Navigator
 
     print(Navigator(ip=domain).ip)
 
 
 @utility.command()
 def set_env_variables():
-    from netscanner.utils import set_env
+    from src.utils import set_env
 
     abuse_ip_api = typer.prompt(text="[cyan]Enter AbuseIP API key", hide_input=True)
     location_database = typer.prompt(

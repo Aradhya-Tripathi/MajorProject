@@ -3,11 +3,11 @@ import socket
 
 from scapy import all as modules
 
-from netscanner.ip.classification.abuseip_classification import AbuseIPClassification
-from netscanner.ip.model.data import primary_details_source
-from netscanner.ip.utils import public_ip
-from netscanner.sniff.sniff import Sniffer
-from netscanner.renderer import console
+from src.ip.classification.abuseip_classification import AbuseIPClassification
+from src.ip.model.data import primary_details_source
+from src.ip.utils import public_ip
+from src.sniff.sniff import Sniffer
+from cli.renderer import console
 
 
 class Navigator:
@@ -71,7 +71,7 @@ class Navigator:
 
     def abuse_ip_address_classification(self) -> dict[str, str]:
         console.print(
-            "\n\nClassifying packets using the AbuseIP...\n\n",
+            "Classifying packets using the AbuseIP...",
             style="cyan",
             verbose=self.verbose,
         )
@@ -97,7 +97,9 @@ class Navigator:
                 {
                     "Classification": f"Safe {result['abuseConfidenceScore']}"
                     if result["abuseConfidenceScore"] < 50
-                    else f"Unsafe {result['abuseConfidenceScore']}"
+                    else f"Unsafe {result['abuseConfidenceScore']}",
+                    "Usage": result["usageType"],
+                    "ISP": result["isp"],
                 }
             )
 

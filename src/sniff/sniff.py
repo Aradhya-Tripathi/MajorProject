@@ -1,10 +1,11 @@
+import binascii
 import logging
 import os
 import socket
 
-from netscanner.ip.utils import QUESTIONS, private_ip, proto_lookup
-from netscanner.utils import convert_unix_timestamp, get_src
-from netscanner.renderer import console, render_sniffed_packets
+from cli.renderer import console, render_sniffed_packets
+from src.ip.utils import QUESTIONS, private_ip, proto_lookup
+from src.utils import convert_unix_timestamp, get_src
 
 logging.getLogger("scapy").setLevel(logging.ERROR)
 
@@ -22,6 +23,7 @@ class Sniffer:
         "packet_count",
         "send_request",
         "only_inbound",
+        "show_packets",
     )
 
     def __init__(
@@ -32,12 +34,14 @@ class Sniffer:
         verbose: bool = True,
         send_request: bool = False,
         only_inbound: bool = False,
+        show_packets: bool = False,
     ):
         if os.getuid() != 0:
             raise PermissionError(
                 "Not enough permissions to run this sniffer use as root"
             )
         self.verbose = verbose
+        self.show_packets = show_packets
 
         console.print("[cyan]Initializing Parameters...", verbose=self.verbose)
 
@@ -52,7 +56,7 @@ class Sniffer:
         self.packets = []
         self.packet_count = 0
 
-        console.print("[cyan]Parameters initialized.", self.verbose)
+        console.print("[cyan]Parameters initialized.", verbose=self.verbose)
         self.observe()
 
     def get_packets(self) -> list[modules.Packet]:
@@ -67,7 +71,7 @@ class Sniffer:
         self.packets.append(packet)
         self.packet_count += 1
 
-        if self.verbose:
+        if self.show_packets:
             question_and_answers = {}
 
             for question in self.questions:
@@ -86,6 +90,11 @@ class Sniffer:
                         question_and_answers[question] = getattr(
                             packet[modules.IP], question
                         )()
+
+                    elif question == "load":
+                        question_and_answers[question] = binascii.hexlify(
+                            getattr(packet[modules.IP], question)
+                        ).decode("utf-8")
 
                     else:
                         question_and_answers[question] = getattr(

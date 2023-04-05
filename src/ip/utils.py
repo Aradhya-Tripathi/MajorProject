@@ -2,7 +2,7 @@ import shlex
 import socket
 import subprocess
 
-from netscanner.renderer import console
+from cli.renderer import console
 
 QUESTIONS = [
     "dst",
@@ -16,7 +16,6 @@ QUESTIONS = [
     "sport",
     "dport",
     "time",
-    "payload",
 ]
 
 ABUSEIP_UNWANTED = [
@@ -75,7 +74,7 @@ def proto_lookup() -> dict[int, str]:
 def redundant_api_ip_details(
     ip_list: list[str], intermediate_node_details: dict[str, str]
 ) -> dict[str, str]:
-    from netscanner.ip import session
+    from src.ip import session
 
     console.print(
         "[red][bold]Some IP locations were not found in the databases querying esternal services..."

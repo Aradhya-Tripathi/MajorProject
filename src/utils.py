@@ -35,7 +35,7 @@ def get_src(bp_filters: str) -> str:
 
 
 def set_env(vars: list, root_path: str = None):
-    env_vars_keys = ["AbuseIPDb-Key", "ip2location"]
+    env_vars_keys = ["AbuseIPDb-Key", "ip2location", "chatapi"]
 
     for idx, keys in enumerate(env_vars_keys, start=0):
         vars[idx] = keys + "=" + vars[idx]

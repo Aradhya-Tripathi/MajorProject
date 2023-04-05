@@ -1,5 +1,7 @@
 # Handled of all final output render.
 import random
+import sys
+import time
 import typing
 
 from rich.console import Console, Group
@@ -150,7 +152,7 @@ def render_sniffed_packets(question_and_answers: dict[str, str], packet_count: i
 def render_network_classification(
     intermediate_node_details: dict[str, dict[str, str]]
 ) -> None:
-    from netscanner.ip.utils import ABUSEIP_UNWANTED
+    from src.ip.utils import ABUSEIP_UNWANTED
 
     for value in intermediate_node_details.values():
         for unwanted in ABUSEIP_UNWANTED:
@@ -159,3 +161,19 @@ def render_network_classification(
     render_table_with_details(
         intermediate_node_details=intermediate_node_details,
     )
+
+
+def render_chat_gpt_response(response: str) -> None:
+    # Fix colors on this
+    color = "[magenta]"
+    console.print("\n\n[cyan]GPT:", end=" ")
+    for res in response:
+        if res != " ":
+            console.print(color + res, end="")
+        else:
+            console.print(color + res, end=" ")
+
+        sys.stdout.flush()
+        time.sleep(0.02)
+
+    print()

@@ -1,7 +1,7 @@
 import os
 from concurrent.futures import ThreadPoolExecutor
 
-from netscanner.ip import session
+from src.ip import session
 
 api_url = "https://api.abuseipdb.com/api/v2/check"
 headers = {"Accept": "application/json", "Key": os.getenv("AbuseIPDb-Key")}

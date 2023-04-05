@@ -5,8 +5,8 @@ import struct
 import pymongo
 from rich.progress import track
 
-from netscanner.ip.utils import redundant_api_ip_details
-from netscanner.renderer import console
+from src.ip.utils import redundant_api_ip_details
+from cli.renderer import console
 
 storage = pymongo.MongoClient(os.getenv("ip2location"))
 

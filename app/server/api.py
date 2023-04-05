@@ -1,7 +1,7 @@
 from functools import lru_cache
 
-from netscanner.ip.navigator import Navigator
-from netscanner.ip.utils import ABUSEIP_UNWANTED
+from src.ip.navigator import Navigator
+from src.ip.utils import ABUSEIP_UNWANTED
 
 
 @lru_cache(maxsize=512)
