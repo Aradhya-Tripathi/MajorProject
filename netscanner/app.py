@@ -112,5 +112,16 @@ def get_ip_address(domain: str):
     print(Navigator(ip=domain).ip)
 
 
+@utility.command()
+def set_env_variables():
+    from netscanner.utils import set_env
+
+    abuse_ip_api = typer.prompt(text="[cyan]Enter AbuseIP API key", hide_input=True)
+    location_database = typer.prompt(
+        text="[cyan]Enter location databse API key", hide_input=True
+    )
+    set_env(vars=[abuse_ip_api, location_database])
+
+
 if __name__ == "__main__":
     app()

@@ -6,3 +6,4 @@ dbip*
 .DS_*
 .vscode/
 node_modules
+export_deps.py
