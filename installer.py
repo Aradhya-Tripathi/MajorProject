@@ -96,7 +96,7 @@ class Installer:
             print("Skipping clone as project exists")
 
     def install_requirement(self) -> None:
-        run(f"{self.pip} install .", cwd=self.clone_path)
+        run(f"{self.pip} install . gradio", cwd=self.clone_path)
         run("npm install --save electron", cwd=os.path.join(self.clone_path, "app"))
 
     def install(self) -> None:

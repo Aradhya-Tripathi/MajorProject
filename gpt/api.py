@@ -17,7 +17,15 @@ HEADERS = {
 }
 
 
-def threat_assessment(
+def send_request(data) -> None | dict[str, str]:
+    response = chat_session.post(url=BASE_URL, headers=HEADERS, json=data)
+    if response.ok:
+        return response.json()["choices"][0]["message"]["content"]
+
+    raise ConnectionError(f"Issue with chat gpt: {response.json()}")
+
+
+def single_ip_address(
     ip_address: str, usage: str, is_safe: str, verbose: bool = True
 ) -> str:
     prompt = f"""I need your help to perform a threat analysis on an IP address.
@@ -29,8 +37,7 @@ IP Address: {ip_address}
 Usage Type: {usage}
 Classification: {is_safe}
 
-Please let me know the threat score and any additional contextual information
-you can provide about this IP address. Thank you!
+Please let me know more about this IP address, and please response in a well formatted way.
 """
     model = "gpt-3.5-turbo"
     messages = [
@@ -42,10 +49,26 @@ you can provide about this IP address. Thank you!
     with console.status(
         status="[magenta]Loading threat assesments from chat gpt",
         verbose=verbose,
-        spinner="earth",
+        spinner="bouncingBall",
     ):
-        response = chat_session.post(
-            url=BASE_URL, headers=HEADERS, json={"model": model, "messages": messages}
-        )
-    if response.ok:
-        return response.json()["choices"][0]["message"]["content"]
+        return send_request(data={"model": model, "messages": messages})
+
+
+def port_usages(ports: list[str], verbose: bool = False) -> str:
+    prompt = f"""I need your help in elaborating on the usages of the following ports:
+    {" ".join(ports)}
+"""
+    model = "gpt-3.5-turbo"
+    messages = [
+        {
+            "role": "user",
+            "content": prompt,
+        },
+    ]
+
+    with console.status(
+        status="[magenta]Loading port usages from chat gpt",
+        verbose=verbose,
+        spinner="bouncingBall",
+    ):
+        return send_request(data={"model": model, "messages": messages})

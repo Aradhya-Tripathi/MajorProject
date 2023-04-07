@@ -5,6 +5,7 @@ import time
 import typing
 
 from rich.console import Console, Group
+from rich.columns import Columns
 from rich.panel import Panel
 from rich.status import Status
 from rich.table import Table
@@ -165,8 +166,8 @@ def render_network_classification(
 
 def render_chat_gpt_response(response: str) -> None:
     # Fix colors on this
-    color = "[magenta]"
-    console.print("\n\n[cyan]GPT:", end=" ")
+    color = "[white][bold]"
+    console.print("\n\n[gray3]GPT:", end=" ")
     for res in response:
         if res != " ":
             console.print(color + res, end="")
@@ -177,3 +178,13 @@ def render_chat_gpt_response(response: str) -> None:
         time.sleep(0.02)
 
     print()
+
+
+def render_open_ports(host: str, ports: dict[int:str]) -> None:
+    all_ports = Columns(
+        [port + " " + reason for port, reason in ports.items()],
+        column_first=False,
+        expand=True,
+        equal=True,
+    )
+    console.print(Panel(all_ports, title=f"Open Ports on {host}"))

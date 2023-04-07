@@ -1,6 +1,8 @@
 import shlex
 import socket
 import subprocess
+from concurrent.futures import ThreadPoolExecutor
+from threading import Lock
 
 from cli.renderer import console
 
@@ -27,6 +29,15 @@ ABUSEIP_UNWANTED = [
     "isWhitelisted",
 ]
 
+COMMON_PORT_USAGES = {
+    "20": "FTP",
+    "21": "SFTP",
+    "22": "SSH",
+    "25": "SMTP",
+    "80": "HTTP",
+    "443": "HTTPS",
+}
+
 
 def private_ip(verbose: bool = True):
     """Returns current networks private IP"""
@@ -42,7 +53,7 @@ def private_ip(verbose: bool = True):
     ).decode()
 
     console.print(f"[cyan]Private IP address is: [bold]{ip}", verbose=verbose)
-    return ip
+    return ip.strip()
 
 
 def public_ip(show: bool = True) -> str:
@@ -100,3 +111,32 @@ def redundant_api_ip_details(
             longitude=res.get("lon"),
             field8=res.get("zip"),
         )
+
+
+def ports_in_use(
+    host: str,
+    start: int,
+    end: int,
+    max_workers: int = 100,
+    verbose: bool = True,
+) -> dict[str, str]:
+    ports = {}
+    lock = Lock()
+
+    def _connect(port: int):
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        socket.setdefaulttimeout(1)
+
+        if sock.connect_ex((host, port)) == 0:
+            port = str(port)
+            lock.acquire()
+            ports[port] = COMMON_PORT_USAGES.get(port, "Unknown")
+            lock.release()
+
+    with console.status(
+        f"Scanning open ports on {host}", spinner="bouncingBall", verbose=verbose
+    ):
+        with ThreadPoolExecutor(max_workers=max_workers) as executor:
+            executor.map(_connect, range(start, end))
+
+    return ports

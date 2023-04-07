@@ -3,10 +3,11 @@ from functools import lru_cache
 import typer
 
 from cli.renderer import (
-    render_classification_panel,
-    render_table_with_details,
-    render_network_classification,
     render_chat_gpt_response,
+    render_classification_panel,
+    render_network_classification,
+    render_open_ports,
+    render_table_with_details,
 )
 
 app = typer.Typer(no_args_is_help=True)
@@ -60,7 +61,7 @@ def traceroute(destination: str, verbose: bool = VERBOSE):
 
 @lru_cache(maxsize=512)
 @classify.command()
-def ip_address(request_to: str, verbose: bool = VERBOSE, assess_threat: bool = False):
+def ip_address(request_to: str, verbose: bool = VERBOSE, use_gpt: bool = False):
     from src.ip.navigator import Navigator
 
     classification_results = Navigator(
@@ -69,10 +70,10 @@ def ip_address(request_to: str, verbose: bool = VERBOSE, assess_threat: bool = F
 
     render_classification_panel(classification_result=classification_results)
 
-    if assess_threat:
-        from gpt.threat import threat_assessment
+    if use_gpt:
+        from gpt.api import single_ip_address
 
-        assessment = threat_assessment(
+        assessment = single_ip_address(
             ip_address=classification_results["ipAddress"],
             usage=classification_results["usageType"],
             is_safe=f"unsafe"
@@ -84,7 +85,7 @@ def ip_address(request_to: str, verbose: bool = VERBOSE, assess_threat: bool = F
 
 
 @classify.command()
-def intermediate_node(destination: str, verbose: bool = VERBOSE):
+def intermediate_node(destination: str, verbose: bool = VERBOSE, use_gpt: bool = False):
     from src.ip.navigator import Navigator
 
     intermediate_node_details = Navigator(
@@ -136,6 +137,33 @@ def set_env_variables():
         text="[cyan]Enter location databse API key", hide_input=True
     )
     set_env(vars=[abuse_ip_api, location_database])
+
+
+@utility.command()
+def ports_in_use(
+    host: str,
+    start: int = 0,
+    end: int = 1000,
+    max_workers: int = 100,
+    use_gpt: bool = False,
+    verbose: bool = VERBOSE,
+):
+    from src.ip.utils import ports_in_use
+
+    ports = ports_in_use(
+        host=host,
+        start=start,
+        end=end,
+        max_workers=max_workers,
+        verbose=verbose,
+    )
+    render_open_ports(host, ports)
+
+    if use_gpt:
+        from gpt.api import port_usages
+
+        usage = port_usages(ports=ports.keys())
+        render_chat_gpt_response(response=usage)
 
 
 if __name__ == "__main__":
