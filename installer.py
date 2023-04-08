@@ -27,22 +27,16 @@ def run(
 
 
 class Installer:
-    __slots__ = (
-        "source",
-        "clone_path",
-        "python",
-        "pip",
-        "env",
-        "system",
-    )
+    __slots__ = ("source", "clone_path", "python", "pip", "env", "system", "only_cli")
 
-    def __init__(self, clone_path: str) -> None:
+    def __init__(self, clone_path: str, only_cli: bool = True) -> None:
         if is_windows():
             raise OSError("Does not support windows yet.")
 
         self.source = "https://github.com/Aradhya-Tripathi/MajorProject.git"
         self.clone_path = os.path.abspath(os.path.expanduser(clone_path))
         self.system = sys.platform
+        self.only_cli = only_cli
         self.install()
 
     @property
@@ -96,13 +90,19 @@ class Installer:
             print("Skipping clone as project exists")
 
     def install_requirement(self) -> None:
-        run(f"{self.pip} install . gradio", cwd=self.clone_path)
-        run("npm install --save electron", cwd=os.path.join(self.clone_path, "app"))
+        install_cmd = f"{self.pip} install ."
+        if not self.only_cli:
+            install_cmd += " gradio"
+
+        run(install_cmd, cwd=self.clone_path)
+        if not self.only_cli:
+            run("npm install --save electron", cwd=os.path.join(self.clone_path, "app"))
 
     def install(self) -> None:
         self.clone()
         self.create_environment()
-        self.install_npm()
+        if not self.only_cli:
+            self.install_npm()
         self.install_requirement()
         print(
             f"netscanner --help to get started or cd {os.path.join(self.clone_path, 'app')} && electron ."

@@ -163,7 +163,8 @@ def set_env_variables():
     location_database = typer.prompt(
         text="[cyan]Enter location databse API key", hide_input=True
     )
-    set_env(vars=[abuse_ip_api, location_database])
+    chatapi = typer.prompt(text="[cyan]Enter OpenAI API key", hide_input=True)
+    set_env(vars=[abuse_ip_api, location_database, chatapi])
 
 
 @utility.command()
