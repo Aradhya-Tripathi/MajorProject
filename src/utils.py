@@ -1,5 +1,7 @@
 import os
 import re
+import signal
+import threading
 from datetime import datetime
 from pathlib import Path
 
@@ -48,3 +50,23 @@ def set_env(vars: list, root_path: str = None):
 
     with open(root_path, "w") as f:
         f.write("\n".join(vars))
+
+
+class Timeout:
+    def __init__(self, seconds: int):
+        self.seconds = seconds
+
+    def kill(self, pid: int):
+        print("\n\033[1m\033[93mCall timed out!")
+        os.kill(pid, signal.SIGINT)
+
+    def __enter__(self):
+        if self.seconds:
+            self.killing_thread = threading.Timer(
+                self.seconds, self.kill, kwargs={"pid": os.getpid()}
+            )
+            self.killing_thread.start()
+
+    def __exit__(self, *args, **kwargs):
+        if self.seconds:
+            self.killing_thread.cancel()

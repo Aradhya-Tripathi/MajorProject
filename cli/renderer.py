@@ -1,11 +1,11 @@
 # Handled of all final output render.
 import random
-import sys
 import time
 import typing
 
-from rich.console import Console, Group
 from rich.columns import Columns
+from rich.console import Console, Group
+from rich.live import Live
 from rich.panel import Panel
 from rich.status import Status
 from rich.table import Table
@@ -132,7 +132,9 @@ def render_classification_panel(classification_result: dict[str, str]):
         ]
     )
 
-    console.print(Panel(panel_group, title="[red]IP address details", safe_box=False))
+    console.print(
+        Panel(panel_group, title="[red]IP address details", safe_box=False, expand=True)
+    )
 
 
 def render_sniffed_packets(question_and_answers: dict[str, str], packet_count: int):
@@ -165,19 +167,21 @@ def render_network_classification(
 
 
 def render_chat_gpt_response(response: str) -> None:
-    # Fix colors on this
-    color = "[white][bold]"
-    console.print("\n\n[gray3]GPT:", end=" ")
-    for res in response:
-        if res != " ":
-            console.print(color + res, end="")
-        else:
-            console.print(color + res, end=" ")
+    panel = Panel(
+        title="[magenta]GPT",
+        title_align="center",
+        border_style="red",
+        renderable="",
+    )
+    with Live(panel, auto_refresh=False, vertical_overflow="visible") as live:
 
-        sys.stdout.flush()
-        time.sleep(0.02)
+        def _update(t):
+            panel.renderable += "[bold white]" + t
+            return panel
 
-    print()
+        for res in response:
+            time.sleep(0.002)
+            live.update(_update(res), refresh=True)
 
 
 def render_open_ports(host: str, ports: dict[int:str]) -> None:

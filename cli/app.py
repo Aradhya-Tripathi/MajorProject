@@ -10,6 +10,8 @@ from cli.renderer import (
     render_table_with_details,
 )
 
+from src.utils import Timeout
+
 app = typer.Typer(no_args_is_help=True)
 utility = typer.Typer()
 classify = typer.Typer()
@@ -27,7 +29,7 @@ def sniff(
     extra_questions: str = None,
     send_request: bool = False,
     only_inbound: bool = False,
-    verbose: bool = VERBOSE,
+    verbose: bool = typer.Option(VERBOSE, "--verbose", "-v"),
 ):
     from src.sniff.sniff import Sniffer
 
@@ -46,7 +48,9 @@ def sniff(
 
 
 @app.command()
-def traceroute(destination: str, verbose: bool = VERBOSE):
+def traceroute(
+    destination: str, verbose: bool = typer.Option(VERBOSE, "--verbose", "-v")
+):
     from src.ip.navigator import Navigator
 
     intermediate_node_details, _ = Navigator(
@@ -61,7 +65,12 @@ def traceroute(destination: str, verbose: bool = VERBOSE):
 
 @lru_cache(maxsize=512)
 @classify.command()
-def ip_address(request_to: str, verbose: bool = VERBOSE, use_gpt: bool = False):
+def ip_address(
+    request_to: str,
+    verbose: bool = typer.Option(VERBOSE, "--verbose", "-v"),
+    use_gpt: bool = typer.Option(False, "--use-gpt", "-gpt"),
+    timeout: int = None,
+):
     from src.ip.navigator import Navigator
 
     classification_results = Navigator(
@@ -70,34 +79,52 @@ def ip_address(request_to: str, verbose: bool = VERBOSE, use_gpt: bool = False):
 
     render_classification_panel(classification_result=classification_results)
 
-    if use_gpt:
-        from gpt.api import single_ip_address
+    with Timeout(seconds=timeout):
+        if use_gpt:
+            from gpt.api import single_ip_address
 
-        assessment = single_ip_address(
-            ip_address=classification_results["ipAddress"],
-            usage=classification_results["usageType"],
-            is_safe=f"unsafe"
-            if classification_results["abuseConfidenceScore"] > 50
-            else f"safe",
-            verbose=verbose,
-        )
-        render_chat_gpt_response(response=assessment)
+            assessment = single_ip_address(
+                ip_address=classification_results["ipAddress"],
+                usage=classification_results["usageType"],
+                is_safe=f"unsafe"
+                if classification_results["abuseConfidenceScore"] > 50
+                else f"safe",
+                verbose=verbose,
+            )
+            render_chat_gpt_response(response=assessment)
 
 
 @classify.command()
-def intermediate_node(destination: str, verbose: bool = VERBOSE, use_gpt: bool = False):
+def intermediate_node(
+    destination: str,
+    verbose: bool = typer.Option(VERBOSE, "--verbose", "-v"),
+    use_gpt: bool = typer.Option(False, "--use-gpt", "-gpt"),
+    timeout: int = None,
+):
     from src.ip.navigator import Navigator
 
-    intermediate_node_details = Navigator(
-        ip=destination, verbose=verbose
-    ).abuse_ip_intermediate_node_classification()
+    with Timeout(seconds=timeout):
+        intermediate_node_details = Navigator(
+            ip=destination, verbose=verbose
+        ).abuse_ip_intermediate_node_classification()
 
-    render_table_with_details(intermediate_node_details=intermediate_node_details)
+        render_table_with_details(intermediate_node_details=intermediate_node_details)
+
+        if use_gpt:
+            from gpt.api import intermediate_nodes
+
+            render_chat_gpt_response(
+                response=intermediate_nodes(
+                    ip_addresses=intermediate_node_details.keys(), verbose=verbose
+                )
+            )
 
 
 @classify.command()
 def network_traffic(
-    sniff_count: int = 10, connection_type: str = "tcp", verbose: bool = VERBOSE
+    sniff_count: int = 10,
+    connection_type: str = "tcp",
+    verbose: bool = typer.Option(VERBOSE, "--verbose", "-v"),
 ):
     from src.ip.navigator import Navigator
 
@@ -145,25 +172,27 @@ def ports_in_use(
     start: int = 0,
     end: int = 1000,
     max_workers: int = 100,
-    use_gpt: bool = False,
-    verbose: bool = VERBOSE,
+    timeout: int = None,
+    use_gpt: bool = typer.Option(False, "--use-gpt", "-gpt"),
+    verbose: bool = typer.Option(VERBOSE, "--verbose", "-v"),
 ):
     from src.ip.utils import ports_in_use
 
-    ports = ports_in_use(
-        host=host,
-        start=start,
-        end=end,
-        max_workers=max_workers,
-        verbose=verbose,
-    )
-    render_open_ports(host, ports)
+    with Timeout(seconds=timeout):
+        ports = ports_in_use(
+            host=host,
+            start=start,
+            end=end,
+            max_workers=max_workers,
+            verbose=verbose,
+        )
+        render_open_ports(host, ports)
 
-    if use_gpt:
-        from gpt.api import port_usages
+        if use_gpt:
+            from gpt.api import port_usages
 
-        usage = port_usages(ports=ports.keys())
-        render_chat_gpt_response(response=usage)
+            usage = port_usages(ports=ports.keys(), verbose=verbose)
+            render_chat_gpt_response(response=usage)
 
 
 if __name__ == "__main__":

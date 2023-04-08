@@ -1,10 +1,3 @@
-# This file is responsible for all threat assesments
-# If the IP packets are classified as unsafe using anyof the classisfication
-# APIs which have been called using the --threat-assesment option
-# This class will be called passing all the information regarding the IP
-# and the classification and will give the information based on it.
-
-
 import os
 
 from cli.renderer import console
@@ -25,6 +18,10 @@ def send_request(data) -> None | dict[str, str]:
     raise ConnectionError(f"Issue with chat gpt: {response.json()}")
 
 
+def get_data(prompt: str, model: str = "gpt-3.5-turbo") -> dict[str, str | list]:
+    return {"model": model, "messages": [{"role": "user", "content": prompt}]}
+
+
 def single_ip_address(
     ip_address: str, usage: str, is_safe: str, verbose: bool = True
 ) -> str:
@@ -38,37 +35,43 @@ Usage Type: {usage}
 Classification: {is_safe}
 
 Please let me know more about this IP address, and please response in a well formatted way.
+Please be brief.
 """
-    model = "gpt-3.5-turbo"
-    messages = [
-        {
-            "role": "user",
-            "content": prompt,
-        },
-    ]
+    data = get_data(prompt=prompt)
     with console.status(
         status="[magenta]Loading threat assesments from chat gpt",
         verbose=verbose,
         spinner="bouncingBall",
     ):
-        return send_request(data={"model": model, "messages": messages})
+        return send_request(data=data)
 
 
 def port_usages(ports: list[str], verbose: bool = False) -> str:
     prompt = f"""I need your help in elaborating on the usages of the following ports:
     {" ".join(ports)}
 """
-    model = "gpt-3.5-turbo"
-    messages = [
-        {
-            "role": "user",
-            "content": prompt,
-        },
-    ]
+    data = get_data(prompt=prompt)
 
     with console.status(
         status="[magenta]Loading port usages from chat gpt",
         verbose=verbose,
         spinner="bouncingBall",
     ):
-        return send_request(data={"model": model, "messages": messages})
+        return send_request(data=data)
+
+
+def intermediate_nodes(ip_addresses: list[str], verbose: bool = False) -> str:
+    prompt = f"""I need your help in finding out information about the following IP addresses:
+     {", ".join(ip_addresses)}
+
+    Please provide some contextual information about these IP addresses as well.
+    Please be brief.
+"""
+    data = get_data(prompt=prompt)
+
+    with console.status(
+        status="[magenta]Loading details about the IP addresses from chat gpt",
+        verbose=verbose,
+        spinner="bouncingBall",
+    ):
+        return send_request(data=data)
