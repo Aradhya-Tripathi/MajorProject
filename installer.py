@@ -1,5 +1,5 @@
 """
-This file is to allow easy install and setup of the cli and the dekstop app,
+This file is to allow easy install and setup of the cli and the desktop app,
 only written for easy demonstration.
 """
 import os

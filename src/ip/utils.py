@@ -18,6 +18,7 @@ QUESTIONS = [
     "sport",
     "dport",
     "time",
+    "length",
 ]
 
 ABUSEIP_UNWANTED = [

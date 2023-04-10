@@ -9,7 +9,6 @@ from cli.renderer import (
     render_open_ports,
     render_table_with_details,
 )
-
 from src.utils import Timeout
 
 app = typer.Typer(no_args_is_help=True)
@@ -34,7 +33,7 @@ def sniff(
     from src.sniff.sniff import Sniffer
 
     if extra_questions:
-        extra_questions = extra_questions.strip().split(",")
+        extra_questions = extra_questions.replace(" ", "").split(",")
 
     Sniffer(
         sniff_count=sniff_count,
@@ -44,6 +43,31 @@ def sniff(
         only_inbound=only_inbound,
         verbose=verbose,
         show_packets=True,
+    )
+
+
+@app.command(
+    context_settings={"allow_extra_args": True, "ignore_unknown_options": True}
+)
+def report(
+    ctx: typer.Context,
+    duration: int = None,
+    wait_for: int = 1,
+    notify: bool = False,
+):
+    from src.ip.background import Reporter
+
+    kwargs = {}
+    for i in range(0, len(ctx.args), 2):
+        key = ctx.args[i].replace("--", "").replace("-", "_")
+        value = ctx.args[i + 1]
+        kwargs[key] = value
+
+    Reporter(
+        duration=duration,
+        wait_for=wait_for,
+        notify=notify,
+        **kwargs,
     )
 
 
@@ -108,7 +132,9 @@ def intermediate_node(
             ip=destination, verbose=verbose
         ).abuse_ip_intermediate_node_classification()
 
-        render_table_with_details(intermediate_node_details=intermediate_node_details)
+        render_table_with_details(
+            intermediate_node_details=intermediate_node_details,
+        )
 
         if use_gpt:
             from gpt.api import intermediate_nodes

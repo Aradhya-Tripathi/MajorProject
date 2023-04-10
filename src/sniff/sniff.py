@@ -2,6 +2,9 @@ import binascii
 import logging
 import os
 import socket
+import time
+from typing import Generator
+from src.utils import Timeout
 
 from cli.renderer import console, render_sniffed_packets
 from src.ip.utils import QUESTIONS, private_ip, proto_lookup
@@ -24,6 +27,8 @@ class Sniffer:
         "send_request",
         "only_inbound",
         "show_packets",
+        "is_async",
+        "_sniffer",
     )
 
     def __init__(
@@ -35,6 +40,7 @@ class Sniffer:
         send_request: bool = False,
         only_inbound: bool = False,
         show_packets: bool = False,
+        is_async: bool = False,
     ):
         if os.getuid() != 0:
             raise PermissionError(
@@ -42,6 +48,7 @@ class Sniffer:
             )
         self.verbose = verbose
         self.show_packets = show_packets
+        self.is_async = is_async
 
         console.print("[cyan]Initializing Parameters...", verbose=self.verbose)
 
@@ -55,9 +62,25 @@ class Sniffer:
         self.proto_lookup_table = proto_lookup()
         self.packets = []
         self.packet_count = 0
+        self._sniffer = None
 
         console.print("[cyan]Parameters initialized.", verbose=self.verbose)
-        self.observe()
+        self.sniff()
+
+    def stream_packets(self, duration: int = None, wait_for: int = 1) -> Generator:
+        """Yield packets as they are sniffed"""
+        with Timeout(seconds=duration, kill_func=self.stop):
+            idx = 0
+            try:
+                while True and self._sniffer.running:
+                    if idx < len(self.packets):
+                        yield self.packets[idx]
+                        idx += 1
+                    else:
+                        # If no packets are added after timeout break out of the stream
+                        time.sleep(wait_for)
+            except KeyboardInterrupt:
+                self.stop()
 
     def get_packets(self) -> list[modules.Packet]:
         return self.packets
@@ -70,6 +93,7 @@ class Sniffer:
     def prn(self, packet: modules.Packet) -> None:
         self.packets.append(packet)
         self.packet_count += 1
+        ip_packet = packet[modules.IP]
 
         if self.show_packets:
             question_and_answers = {}
@@ -78,28 +102,28 @@ class Sniffer:
                 try:
                     if question == "proto":
                         question_and_answers[question] = self.proto_lookup_table[
-                            getattr(packet[modules.IP], question)
+                            getattr(ip_packet, question)
                         ]
 
                     elif question == "time":
                         question_and_answers[question] = convert_unix_timestamp(
-                            getattr(packet[modules.IP], question)
+                            getattr(ip_packet, question)
                         )
 
                     elif question == "route":
-                        question_and_answers[question] = getattr(
-                            packet[modules.IP], question
-                        )()
+                        question_and_answers[question] = getattr(ip_packet, question)()
 
                     elif question == "load":
                         question_and_answers[question] = binascii.hexlify(
-                            getattr(packet[modules.IP], question)
+                            getattr(ip_packet, question)
                         ).decode("utf-8")
 
+                    elif question == "length":
+                        question_and_answers[question] = len(ip_packet)
+
                     else:
-                        question_and_answers[question] = getattr(
-                            packet[modules.IP], question
-                        )
+                        question_and_answers[question] = getattr(ip_packet, question)
+
                 except (IndexError, AttributeError) as e:
                     console.print("Invalid packet!", style="bold red")
 
@@ -109,7 +133,7 @@ class Sniffer:
             )
 
     def send_network_request(self, src: str) -> None:
-        """Sends http request to the specified sRC"""
+        """Sends http request to the specified SRC"""
         console.print(
             f"\n[cyan]Sending Request To [bold green]{src}",
             end="\n\n",
@@ -118,7 +142,27 @@ class Sniffer:
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         sock.connect((src, 80))
 
-    def observe(self) -> None:
+    def stop(self, **kwarg) -> None:
+        if self._sniffer:
+            self._sniffer.stop()
+
+    def start(self) -> None:
+        if self._sniffer:
+            self._sniffer.start()
+
+    def request(self) -> None:
+        if src := get_src(self.bp_filters):
+            while len(self.packets) < self.sniff_count:
+                self.send_network_request(src)
+
+    def block_thread(self) -> None:
+        try:
+            while True:
+                ...
+        except KeyboardInterrupt:
+            self.stop()
+
+    def sniff(self) -> None:
         if self.only_inbound:
             private_address = private_ip(verbose=self.verbose)
             inbound_filter = (
@@ -129,36 +173,33 @@ class Sniffer:
             else:
                 self.bp_filters = inbound_filter
 
-        if not self.sniff_count or not self.send_request:
+        if not self.sniff_count or self.is_async:
             console.print(
-                "[italic]Actively Sniffing Press Ctrl/Command + C to exit",
+                "[italic]Actively Sniffing",
                 end="\n\n",
                 verbose=self.verbose,
             )
 
         # Using filters as Specified by BPF (https://en.wikipedia.org/wiki/Berkeley_Packet_Filter)
-        sniffer = modules.AsyncSniffer(
+        self._sniffer = modules.AsyncSniffer(
             prn=self.prn,
             filter=self.bp_filters if self.bp_filters else None,
             count=self.sniff_count,
         )
-        sniffer.start()
+        self.start()
 
         if self.send_request:
-            if src := get_src(self.bp_filters):
-                while len(self.packets) < self.sniff_count:
-                    self.send_network_request(src)
+            self.request()
 
+        # Truly async
+        if self.is_async:
+            return
+
+        # Is not async and sniff_count isn't supplied it just keeps the thread waiting
         if not self.sniff_count:
-            try:
-                while True:
-                    ...
+            self.block_thread()
 
-            except KeyboardInterrupt:
-                sniffer.stop()
-
-        sniffer.join()
-        return self.packets
+        self.stop()
 
 
 if __name__ == "__main__":

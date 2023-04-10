@@ -7,3 +7,4 @@ dbip*
 .vscode/
 node_modules
 export_deps.py
+.idea

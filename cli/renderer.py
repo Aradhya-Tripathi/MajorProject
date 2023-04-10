@@ -1,8 +1,11 @@
 # Handled of all final output render.
+# cSpell:ignore RenderableType, ABUSEIP, renderable
+
 import random
 import time
 import typing
 
+from rich import box as rich_box
 from rich.columns import Columns
 from rich.console import Console, Group
 from rich.live import Live
@@ -19,15 +22,15 @@ class AdaptiveStatus(Status):
     """Status needs a context wrapper thus initialized new class for it."""
 
     def __init__(
-        self,
-        status: "RenderableType",
-        *,
-        console: typing.Optional[Console] = None,
-        spinner: str = "dots",
-        spinner_style: "StyleType" = "status.spinner",
-        speed: float = 1,
-        refresh_per_second: float = 12.5,
-        verbose: bool = True,
+            self,
+            status: "RenderableType",
+            *,
+            console: typing.Optional[Console] = None,
+            spinner: str = "dots",
+            spinner_style: "StyleType" = "status.spinner",
+            speed: float = 1,
+            refresh_per_second: float = 12.5,
+            verbose: bool = True,
     ):
         self.verbose = verbose
         super().__init__(
@@ -51,14 +54,14 @@ class AdaptiveStatus(Status):
 
 class AdaptiveConsole(Console):
     def status(
-        self,
-        status: "RenderableType",
-        *,
-        spinner: str = "dots",
-        spinner_style: "StyleType" = "status.spinner",
-        speed: float = 1,
-        refresh_per_second: float = 12.5,
-        verbose: bool = True,
+            self,
+            status: "RenderableType",
+            *,
+            spinner: str = "dots",
+            spinner_style: "StyleType" = "status.spinner",
+            speed: float = 1,
+            refresh_per_second: float = 12.5,
+            verbose: bool = True,
     ) -> "Status":
         return AdaptiveStatus(
             status,
@@ -78,7 +81,7 @@ class AdaptiveConsole(Console):
 console = AdaptiveConsole()
 
 
-def render_packet_travle_map() -> None:
+def render_packet_travel_map() -> None:
     # latitude, longitude = [], []
     # for detail in self.navigator.intermediate_node_details.values():
     #     latitude.append(detail["latitude"])
@@ -89,18 +92,23 @@ def render_packet_travle_map() -> None:
     console.print("Not Implemented", style="bold red")
 
 
-def render_table_with_details(intermediate_node_details: dict[str, str]) -> None:
+def render_table_with_details(
+        intermediate_node_details: dict[str, dict[str, str]],
+        box: rich_box.Box = rich_box.HEAVY_HEAD,
+) -> None:
     colors = ["cyan", "blink cyan", "magenta", "green"]
     init_columns = False
     table = Table(
         title=f"[green]Network Topology",
+        padding=1,
         expand=True,
+        box=box,
+        highlight=True,
     )
 
-    for idx, (ip, detail) in enumerate(intermediate_node_details.items(), start=1):
+    for ip, detail in intermediate_node_details.items():
         keys = list(detail.keys())
-        keys.insert(0, "Sno.")
-        keys.insert(1, "IP Address")
+        keys.insert(0, "IP Address")
 
         for key in keys:
             if init_columns:
@@ -109,12 +117,13 @@ def render_table_with_details(intermediate_node_details: dict[str, str]) -> None
             table.add_column(
                 key.replace("_", " ").title(),
                 justify="center",
-                style=random.choice(colors) if key != "Sno." else "bold white",
+                style=random.choice(colors),
                 no_wrap=True,
+                overflow="ignore",
             )
 
         init_columns = True
-        table.add_row(str(idx), ip, *map(str, detail.values()))
+        table.add_row(ip, *map(str, detail.values()))
 
     console.print(table)
 
@@ -122,9 +131,9 @@ def render_table_with_details(intermediate_node_details: dict[str, str]) -> None
 def render_classification_panel(classification_result: dict[str, str]):
     panel_group = Group(
         *[
-            f"[cyan]Confidance Score: [bold red]UNSAFE ([bold red]{classification_result['abuseConfidenceScore']})"
+            f"[cyan]Confidence Score: [bold red]UNSAFE ([bold red]{classification_result['abuseConfidenceScore']})"
             if classification_result["abuseConfidenceScore"] > 50
-            else f"[cyan]Confidance Score: [bold green]SAFE ([bold green]{classification_result['abuseConfidenceScore']})",
+            else f"[cyan]Confidence Score: [bold green]SAFE ([bold green]{classification_result['abuseConfidenceScore']})",
             f"[cyan]Is a Public IP: [green]{classification_result['isPublic']}",
             f"[cyan]Internet Service Provider: [green]{classification_result['isp']}",
             f"[cyan]Domain: [green]{classification_result['domain']}",
@@ -148,12 +157,13 @@ def render_sniffed_packets(question_and_answers: dict[str, str], packet_count: i
             renderable=Group(*panels),
             title=f"[red]Packet Information Packet Count: {packet_count}",
             subtitle=f"[red]End Of Information Packet Count: {packet_count}",
+            box=rich_box.DOUBLE_EDGE,
         )
     )
 
 
 def render_network_classification(
-    intermediate_node_details: dict[str, dict[str, str]]
+        intermediate_node_details: dict[str, dict[str, str]]
 ) -> None:
     from src.ip.utils import ABUSEIP_UNWANTED
 
@@ -174,7 +184,6 @@ def render_chat_gpt_response(response: str) -> None:
         renderable="",
     )
     with Live(panel, auto_refresh=False, vertical_overflow="visible") as live:
-
         def _update(t):
             panel.renderable += "[bold white]" + t
             return panel
