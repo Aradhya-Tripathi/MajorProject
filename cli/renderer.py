@@ -12,6 +12,7 @@ from rich.live import Live
 from rich.panel import Panel
 from rich.status import Status
 from rich.table import Table
+from rich.theme import Theme
 
 if typing.TYPE_CHECKING:
     from rich.console import RenderableType
@@ -22,15 +23,15 @@ class AdaptiveStatus(Status):
     """Status needs a context wrapper thus initialized new class for it."""
 
     def __init__(
-            self,
-            status: "RenderableType",
-            *,
-            console: typing.Optional[Console] = None,
-            spinner: str = "dots",
-            spinner_style: "StyleType" = "status.spinner",
-            speed: float = 1,
-            refresh_per_second: float = 12.5,
-            verbose: bool = True,
+        self,
+        status: "RenderableType",
+        *,
+        console: typing.Optional[Console] = None,
+        spinner: str = "dots",
+        spinner_style: "StyleType" = "status.spinner",
+        speed: float = 1,
+        refresh_per_second: float = 12.5,
+        verbose: bool = True,
     ):
         self.verbose = verbose
         super().__init__(
@@ -54,14 +55,14 @@ class AdaptiveStatus(Status):
 
 class AdaptiveConsole(Console):
     def status(
-            self,
-            status: "RenderableType",
-            *,
-            spinner: str = "dots",
-            spinner_style: "StyleType" = "status.spinner",
-            speed: float = 1,
-            refresh_per_second: float = 12.5,
-            verbose: bool = True,
+        self,
+        status: "RenderableType",
+        *,
+        spinner: str = "dots",
+        spinner_style: "StyleType" = "status.spinner",
+        speed: float = 1,
+        refresh_per_second: float = 12.5,
+        verbose: bool = True,
     ) -> "Status":
         return AdaptiveStatus(
             status,
@@ -78,7 +79,9 @@ class AdaptiveConsole(Console):
             return super().print(*args, **kwargs)
 
 
-console = AdaptiveConsole()
+console = AdaptiveConsole(
+    theme=Theme({"info": "bold bright_black", "repr.ellipsis": ""}, inherit=True)
+)
 
 
 def render_packet_travel_map() -> None:
@@ -93,8 +96,8 @@ def render_packet_travel_map() -> None:
 
 
 def render_table_with_details(
-        intermediate_node_details: dict[str, dict[str, str]],
-        box: rich_box.Box = rich_box.HEAVY_HEAD,
+    intermediate_node_details: dict[str, dict[str, str]],
+    box: rich_box.Box = rich_box.HEAVY_HEAD,
 ) -> None:
     colors = ["cyan", "blink cyan", "magenta", "green"]
     init_columns = False
@@ -163,7 +166,7 @@ def render_sniffed_packets(question_and_answers: dict[str, str], packet_count: i
 
 
 def render_network_classification(
-        intermediate_node_details: dict[str, dict[str, str]]
+    intermediate_node_details: dict[str, dict[str, str]]
 ) -> None:
     from src.ip.utils import ABUSEIP_UNWANTED
 
@@ -184,6 +187,7 @@ def render_chat_gpt_response(response: str) -> None:
         renderable="",
     )
     with Live(panel, auto_refresh=False, vertical_overflow="visible") as live:
+
         def _update(t):
             panel.renderable += "[bold white]" + t
             return panel

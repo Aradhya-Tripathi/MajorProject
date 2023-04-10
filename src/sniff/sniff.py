@@ -13,6 +13,7 @@ from src.utils import convert_unix_timestamp, get_src
 logging.getLogger("scapy").setLevel(logging.ERROR)
 
 from scapy import all as modules
+from scapy import error
 
 
 class Sniffer:
@@ -50,7 +51,7 @@ class Sniffer:
         self.show_packets = show_packets
         self.is_async = is_async
 
-        console.print("[cyan]Initializing Parameters...", verbose=self.verbose)
+        console.print("Initializing Parameters...", verbose=self.verbose, style="info")
 
         self.send_request = send_request
         self.bp_filters = bp_filters if bp_filters else ""
@@ -64,7 +65,7 @@ class Sniffer:
         self.packet_count = 0
         self._sniffer = None
 
-        console.print("[cyan]Parameters initialized.", verbose=self.verbose)
+        console.print("Parameters initialized.", verbose=self.verbose, style="info")
         self.sniff()
 
     def stream_packets(self, duration: int = None, wait_for: int = 1) -> Generator:
@@ -135,16 +136,20 @@ class Sniffer:
     def send_network_request(self, src: str) -> None:
         """Sends http request to the specified SRC"""
         console.print(
-            f"\n[cyan]Sending Request To [bold green]{src}",
+            f"\nSending Request To [bold green]{src}",
             end="\n\n",
             verbose=self.verbose,
+            style="info",
         )
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         sock.connect((src, 80))
 
     def stop(self, **kwarg) -> None:
         if self._sniffer:
-            self._sniffer.stop()
+            try:
+                self._sniffer.stop()
+            except error.Scapy_Exception:
+                self._sniffer.join()
 
     def start(self) -> None:
         if self._sniffer:
@@ -178,6 +183,7 @@ class Sniffer:
                 "[italic]Actively Sniffing",
                 end="\n\n",
                 verbose=self.verbose,
+                style="info",
             )
 
         # Using filters as Specified by BPF (https://en.wikipedia.org/wiki/Berkeley_Packet_Filter)

@@ -72,7 +72,7 @@ class Navigator:
     def abuse_ip_address_classification(self) -> dict[str, str]:
         console.print(
             "Classifying packets using the AbuseIP...",
-            style="cyan",
+            style="info",
             verbose=self.verbose,
         )
         return AbuseIPClassification(address=self.ip).report()
@@ -126,7 +126,7 @@ class Navigator:
         else:
             console.print(
                 "Removing all duplicate IP addresses",
-                style="red on gray0",
+                style="info",
                 verbose=self.verbose,
             )
             packet_srcs = set(packet_srcs)

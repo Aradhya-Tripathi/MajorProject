@@ -10,10 +10,15 @@ sudo netscanner classify ip-address 103.146.202.146
 sudo netscanner classify ip-address 20.207.73.82
 
 # Trace route
-sudo netscanner traceroute 65.9.86.80
+sudo netscanner traceroute apple.com
 
 # Classify Topology
-sudo netscanner classify intermediate-node 65.9.86.80
+sudo netscanner classify intermediate-node apple.com
 
 # Classify as it comes
 sudo netscanner classify network-traffic --sniff-count 5
+
+# Reporter
+sudo netscanner report --only-inbound True --bp-filters "tcp" --notify --duration 10 -v
+
+# Visit https://www.abuseipdb.com/check/158.69.111.17 during report

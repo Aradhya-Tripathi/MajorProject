@@ -54,6 +54,7 @@ def report(
     duration: int = None,
     wait_for: int = 1,
     notify: bool = False,
+    verbose: bool = typer.Option(VERBOSE, "--verbose", "-v"),
 ):
     from src.ip.background import Reporter
 
@@ -67,6 +68,7 @@ def report(
         duration=duration,
         wait_for=wait_for,
         notify=notify,
+        verbose=verbose,
         **kwargs,
     )
 

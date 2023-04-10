@@ -102,7 +102,7 @@ def redundant_api_ip_details(
         exit(-1)
 
     response = response.json()
-    console.print("[green]Found results using external services!")
+    console.print("Found results using external services!", style="info")
     for idx, res in enumerate(response, start=0):
         intermediate_node_details[ip_list[idx]] = dict(
             country_name=res.get("country"),
