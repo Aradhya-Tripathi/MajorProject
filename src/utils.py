@@ -3,7 +3,7 @@ import os
 import re
 import signal
 import threading
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
 
 SRC_PATTERN = re.compile(r"\bsrc\b\s+(\S+)")
@@ -59,8 +59,37 @@ class Json(dict):
             f.write(json.dumps(self, indent=2))
 
 
+# parse the time duration string
+def parse_duration(duration: str = None) -> float:
+    if not duration:
+        return 0.0
+    try:
+        duration_parts = duration.split()
+        duration_value = float(duration_parts[0])
+        duration_unit = duration_parts[1]
+    except IndexError:
+        raise Exception(f"Invalid duration format {duration} format: <duration unit>")
+
+    # convert the time duration to seconds
+    if duration_unit == "day":
+        duration_seconds = timedelta(days=duration_value).total_seconds()
+    elif duration_unit == "hour":
+        duration_seconds = timedelta(hours=duration_value).total_seconds()
+    elif duration_unit == "minute":
+        duration_seconds = timedelta(minutes=duration_value).total_seconds()
+    elif duration_unit == "second":
+        duration_seconds = duration_value
+    elif duration_unit == "week":
+        duration_seconds = timedelta(weeks=duration_value).total_seconds()
+    else:
+        raise ValueError(f"Invalid duration unit: {duration_unit}")
+
+    return duration_seconds
+
+
 class Timeout:
     def __init__(self, seconds: int, kill_func: callable = None) -> None:
+        print("Initialized")
         self.seconds = seconds
         self.kill_func = kill_func
 

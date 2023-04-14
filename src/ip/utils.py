@@ -141,3 +141,10 @@ def ports_in_use(
             executor.map(_connect, range(start, end))
 
     return ports
+
+
+def hostname(ip: str):
+    try:
+        return socket.gethostbyaddr(ip)[0]
+    except (socket.gaierror, socket.herror):
+        return ip

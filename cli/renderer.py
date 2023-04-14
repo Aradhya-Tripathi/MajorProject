@@ -1,5 +1,4 @@
 # Handled of all final output render.
-# cSpell:ignore RenderableType, ABUSEIP, renderable
 
 import random
 import time
@@ -13,6 +12,8 @@ from rich.panel import Panel
 from rich.status import Status
 from rich.table import Table
 from rich.theme import Theme
+
+from src import __authors__, __version__
 
 if typing.TYPE_CHECKING:
     from rich.console import RenderableType
@@ -80,7 +81,13 @@ class AdaptiveConsole(Console):
 
 
 console = AdaptiveConsole(
-    theme=Theme({"info": "bold bright_black", "repr.ellipsis": ""}, inherit=True)
+    theme=Theme(
+        {
+            "info": "bold bright_black",
+            "repr.ellipsis": "",
+            "repr.number": "",
+        },
+    )
 )
 
 
@@ -205,3 +212,22 @@ def render_open_ports(host: str, ports: dict[int:str]) -> None:
         equal=True,
     )
     console.print(Panel(all_ports, title=f"Open Ports on {host}"))
+
+
+def render_netscanner():
+    console.print(
+        f"""
+        [dim cyan]
+ _   _      _
+| \ | | ___| |_ ___  ___ __ _ _ __  _ __   ___ _ __
+|  \| |/ _ \ __/ __|/ __/ _` | '_ \| '_ \ / _ \ '__|
+| |\  |  __/ |_\__ \ (_| (_| | | | | | | |  __/ |
+|_| \_|\___|\__|___/\___\__,_|_| |_|_| |_|\___|_|
+    [/dim cyan]
+
+    Version: [cyan]{__version__}[/cyan]
+    Code: https://github.com/Aradhya-Tripathi/MajorProject
+    [dim cyan]Authors: {', '.join(__authors__)}[/dim cyan]
+
+    """,
+    )

@@ -6,7 +6,7 @@ from scapy import all as modules
 from src.ip.classification.abuseip_classification import AbuseIPClassification
 from src.ip.model.data import primary_details_source
 from src.ip.utils import public_ip
-from src.sniff.sniff import Sniffer
+from src.ip.sniff import Sniffer
 from cli.renderer import console
 
 
@@ -133,7 +133,8 @@ class Navigator:
 
         # Removes all duplicate packets (don't want to spam the api)
         with console.status(
-            f"[cyan]Classifying {len(packet_srcs) if isinstance(packet_srcs, list) else 1} inbound packets using AbuseIP...",
+            f"""[cyan]Classifying {len(packet_srcs) if isinstance(packet_srcs, list) else 1}
+inbound packets using AbuseIP...""",
             spinner="earth",
             verbose=self.verbose,
         ):

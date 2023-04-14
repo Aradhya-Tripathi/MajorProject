@@ -1,3 +1,4 @@
+import sys
 from functools import lru_cache
 
 import typer
@@ -5,19 +6,34 @@ import typer
 from cli.renderer import (
     render_chat_gpt_response,
     render_classification_panel,
+    render_netscanner,
     render_network_classification,
     render_open_ports,
     render_table_with_details,
 )
 from src.utils import Timeout
 
-app = typer.Typer(no_args_is_help=True)
+app = typer.Typer(invoke_without_command=True)
+realtime = typer.Typer()
 utility = typer.Typer()
 classify = typer.Typer()
+app.add_typer(realtime, name="realtime")
 app.add_typer(utility, name="utils")
 app.add_typer(classify, name="classify")
 
 VERBOSE = False
+
+
+######################## Command Utils ########################
+
+
+def extra_kwargs(ctx, kwargs: dict[any, any]):
+    for i in range(0, len(ctx.args), 2):
+        key = ctx.args[i].replace("--", "").replace("-", "_")
+        value = ctx.args[i + 1]
+        kwargs[key] = value
+
+
 ######################## Sniff Command ########################
 
 
@@ -28,9 +44,10 @@ def sniff(
     extra_questions: str = None,
     send_request: bool = False,
     only_inbound: bool = False,
+    add_to_dashboard: bool = True,
     verbose: bool = typer.Option(VERBOSE, "--verbose", "-v"),
-):
-    from src.sniff.sniff import Sniffer
+) -> None:
+    from src.ip.sniff import Sniffer
 
     if extra_questions:
         extra_questions = extra_questions.replace(" ", "").split(",")
@@ -42,41 +59,50 @@ def sniff(
         send_request=send_request,
         only_inbound=only_inbound,
         verbose=verbose,
+        add_to_dashboard=add_to_dashboard,
         show_packets=True,
     )
 
 
-@app.command(
+@realtime.command(
     context_settings={"allow_extra_args": True, "ignore_unknown_options": True}
 )
-def report(
+def dashboard(ctx: typer.Context, verbose: bool = VERBOSE) -> None:
+    from src.ip.realtime import Realtime
+
+    kwargs = {}
+    extra_kwargs(ctx, kwargs)
+
+    Realtime(verbose=verbose, **kwargs).dashboard()
+
+
+@realtime.command(
+    context_settings={"allow_extra_args": True, "ignore_unknown_options": True}
+)
+def monitor(
     ctx: typer.Context,
-    duration: int = None,
+    duration: str = None,
     wait_for: int = 1,
     notify: bool = False,
     verbose: bool = typer.Option(VERBOSE, "--verbose", "-v"),
-):
-    from src.ip.background import Reporter
+) -> None:
+    from src.ip.realtime import Realtime
 
     kwargs = {}
-    for i in range(0, len(ctx.args), 2):
-        key = ctx.args[i].replace("--", "").replace("-", "_")
-        value = ctx.args[i + 1]
-        kwargs[key] = value
-
-    Reporter(
+    extra_kwargs(ctx, kwargs)
+    Realtime(
         duration=duration,
         wait_for=wait_for,
         notify=notify,
         verbose=verbose,
         **kwargs,
-    )
+    ).monitor()
 
 
 @app.command()
 def traceroute(
     destination: str, verbose: bool = typer.Option(VERBOSE, "--verbose", "-v")
-):
+) -> None:
     from src.ip.navigator import Navigator
 
     intermediate_node_details, _ = Navigator(
@@ -96,7 +122,7 @@ def ip_address(
     verbose: bool = typer.Option(VERBOSE, "--verbose", "-v"),
     use_gpt: bool = typer.Option(False, "--use-gpt", "-gpt"),
     timeout: int = None,
-):
+) -> None:
     from src.ip.navigator import Navigator
 
     classification_results = Navigator(
@@ -126,7 +152,7 @@ def intermediate_node(
     verbose: bool = typer.Option(VERBOSE, "--verbose", "-v"),
     use_gpt: bool = typer.Option(False, "--use-gpt", "-gpt"),
     timeout: int = None,
-):
+) -> None:
     from src.ip.navigator import Navigator
 
     with Timeout(seconds=timeout):
@@ -153,7 +179,7 @@ def network_traffic(
     sniff_count: int = 10,
     connection_type: str = "tcp",
     verbose: bool = typer.Option(VERBOSE, "--verbose", "-v"),
-):
+) -> None:
     from src.ip.navigator import Navigator
 
     classified_packets = Navigator(verbose=verbose).abuse_ip_sniff_and_classify(
@@ -163,28 +189,28 @@ def network_traffic(
 
 
 @utility.command()
-def private_ip():
+def private_ip() -> None:
     from src.ip.utils import private_ip
 
     private_ip()
 
 
 @utility.command()
-def public_ip():
+def public_ip() -> None:
     from src.ip.utils import public_ip
 
     public_ip()
 
 
 @utility.command()
-def get_ip_address(domain: str):
+def get_ip_address(domain: str) -> None:
     from src.ip.navigator import Navigator
 
     print(Navigator(ip=domain).ip)
 
 
 @utility.command()
-def set_env_variables():
+def set_env_variables() -> None:
     from src.utils import set_env
 
     abuse_ip_api = typer.prompt(text="[cyan]Enter AbuseIP API key", hide_input=True)
@@ -204,7 +230,7 @@ def ports_in_use(
     timeout: int = None,
     use_gpt: bool = typer.Option(False, "--use-gpt", "-gpt"),
     verbose: bool = typer.Option(VERBOSE, "--verbose", "-v"),
-):
+) -> None:
     from src.ip.utils import ports_in_use
 
     with Timeout(seconds=timeout):
@@ -224,5 +250,12 @@ def ports_in_use(
             render_chat_gpt_response(response=usage)
 
 
-if __name__ == "__main__":
+def main() -> None:
+    if len(sys.argv) == 1:
+        render_netscanner()
+
     app()
+
+
+if __name__ == "__main__":
+    main()

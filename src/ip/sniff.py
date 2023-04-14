@@ -1,14 +1,15 @@
 import binascii
+import json
 import logging
 import os
 import socket
 import time
 from typing import Generator
-from src.utils import Timeout
 
 from cli.renderer import console, render_sniffed_packets
+from src.ip.model.cache import get_cache
 from src.ip.utils import QUESTIONS, private_ip, proto_lookup
-from src.utils import convert_unix_timestamp, get_src
+from src.utils import Timeout, convert_unix_timestamp, get_src, parse_duration
 
 logging.getLogger("scapy").setLevel(logging.ERROR)
 
@@ -16,32 +17,23 @@ from scapy import all as modules
 from scapy import error
 
 
+idx = -1
+
+
 class Sniffer:
-    __slots__ = (
-        "sniff_count",
-        "bp_filters",
-        "questions",
-        "proto_lookup_table",
-        "packets",
-        "verbose",
-        "packet_count",
-        "send_request",
-        "only_inbound",
-        "show_packets",
-        "is_async",
-        "_sniffer",
-    )
+    packet_cache = "Packets"
 
     def __init__(
         self,
         sniff_count: int = 0,
-        bp_filters: str | None = None,
+        bp_filters: str = None,
         extra_questions: list | None = None,
         verbose: bool = True,
         send_request: bool = False,
         only_inbound: bool = False,
         show_packets: bool = False,
         is_async: bool = False,
+        add_to_dashboard: bool = False,
     ):
         if os.getuid() != 0:
             raise PermissionError(
@@ -50,27 +42,32 @@ class Sniffer:
         self.verbose = verbose
         self.show_packets = show_packets
         self.is_async = is_async
-
         console.print("Initializing Parameters...", verbose=self.verbose, style="info")
 
         self.send_request = send_request
         self.bp_filters = bp_filters if bp_filters else ""
         self.sniff_count = sniff_count
         self.only_inbound = only_inbound
+        self.add_to_dashboard = add_to_dashboard
         extra_questions = extra_questions if extra_questions else []
 
         self.questions = self.questions_from_sniff(extra_questions=extra_questions)
         self.proto_lookup_table = proto_lookup()
-        self.packets = []
         self.packet_count = 0
         self._sniffer = None
+        self.packets = []
+        self.cache = get_cache()
 
         console.print("Parameters initialized.", verbose=self.verbose, style="info")
+        if self.add_to_dashboard:
+            console.print("Storing network information", style="bold red")
         self.sniff()
 
-    def stream_packets(self, duration: int = None, wait_for: int = 1) -> Generator:
+    def stream_packets(
+        self, duration: str = "1 second", wait_for: int = 1
+    ) -> Generator:
         """Yield packets as they are sniffed"""
-        with Timeout(seconds=duration, kill_func=self.stop):
+        with Timeout(seconds=parse_duration(duration), kill_func=self.stop):
             idx = 0
             try:
                 while True and self._sniffer.running:
@@ -92,46 +89,52 @@ class Sniffer:
         return QUESTIONS
 
     def prn(self, packet: modules.Packet) -> None:
+        if not packet.haslayer(modules.IP):
+            return
+
+        question_and_answers = {}
         self.packets.append(packet)
         self.packet_count += 1
         ip_packet = packet[modules.IP]
 
-        if self.show_packets:
-            question_and_answers = {}
+        for question in self.questions:
+            try:
+                if question == "proto":
+                    question_and_answers[question] = self.proto_lookup_table[
+                        getattr(ip_packet, question)
+                    ]
 
-            for question in self.questions:
-                try:
-                    if question == "proto":
-                        question_and_answers[question] = self.proto_lookup_table[
-                            getattr(ip_packet, question)
-                        ]
+                elif question == "time":
+                    question_and_answers[question] = convert_unix_timestamp(
+                        getattr(ip_packet, question)
+                    )
 
-                    elif question == "time":
-                        question_and_answers[question] = convert_unix_timestamp(
-                            getattr(ip_packet, question)
-                        )
+                elif question == "route":
+                    question_and_answers[question] = getattr(ip_packet, question)()
 
-                    elif question == "route":
-                        question_and_answers[question] = getattr(ip_packet, question)()
+                elif question == "load":
+                    question_and_answers[question] = str(
+                        binascii.hexlify((getattr(ip_packet, question))).decode()
+                    )
 
-                    elif question == "load":
-                        question_and_answers[question] = binascii.hexlify(
-                            getattr(ip_packet, question)
-                        ).decode("utf-8")
+                elif question == "length":
+                    question_and_answers[question] = len(ip_packet)
 
-                    elif question == "length":
-                        question_and_answers[question] = len(ip_packet)
+                else:
+                    question_and_answers[question] = getattr(ip_packet, question, None)
 
-                    else:
-                        question_and_answers[question] = getattr(ip_packet, question)
+            except (IndexError, AttributeError) as e:
+                console.print(f"Invalid packet! {e}", style="bold red")
 
-                except (IndexError, AttributeError) as e:
-                    console.print("Invalid packet!", style="bold red")
+            if self.show_packets:
+                render_sniffed_packets(
+                    question_and_answers=question_and_answers,
+                    packet_count=self.packet_count,
+                )
 
-            render_sniffed_packets(
-                question_and_answers=question_and_answers,
-                packet_count=self.packet_count,
-            )
+        # Add packet to cache for history
+        if self.add_to_dashboard:
+            self.cache.rpush(self.packet_cache, json.dumps(question_and_answers))
 
     def send_network_request(self, src: str) -> None:
         """Sends http request to the specified SRC"""

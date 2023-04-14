@@ -8,9 +8,11 @@ HEADERS = {
     "Content-Type": "application/json",
     "Authorization": f"Bearer {os.getenv('chatapi')}",
 }
+MAX_TOKENS = 150
 
 
 def send_request(data) -> None | dict[str, str]:
+    data.update({"max_tokens": MAX_TOKENS})
     response = chat_session.post(url=BASE_URL, headers=HEADERS, json=data)
     if response.ok:
         return response.json()["choices"][0]["message"]["content"]
