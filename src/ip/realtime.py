@@ -1,6 +1,5 @@
 # This file is to handle background sniffing and or classifying and reporting the same.
 
-import json
 import os
 import random
 import shlex
@@ -16,6 +15,7 @@ import asciichartpy as asc
 from rich.layout import Layout
 from rich.live import Live
 from rich.panel import Panel
+from rich.style import Style
 from rich.text import Text
 
 from scapy import all as modules
@@ -26,6 +26,8 @@ from src.ip.model.cache import get_cache
 from src.ip.sniff import Sniffer
 from src.ip.utils import hostname
 from src.utils import parse_duration
+
+from src.ip.history import History
 
 
 class Dashboard:
@@ -71,7 +73,10 @@ class Dashboard:
 
     def get_network_traffic(self, capture_rate: float) -> str:
         self.capture_rates.append(capture_rate)
-        graph = Text(asc.plot(self.capture_rates, self.plot_configs), style="bold red")
+        graph = Text(
+            asc.plot(self.capture_rates, self.plot_configs),
+            style=Style(color="green", bold=True),
+        )
         return graph
 
     def get_threats(self, srcs: set) -> None:
@@ -79,7 +84,7 @@ class Dashboard:
             return
 
         srcs = random.sample(list(srcs), len(srcs) // 2)
-        packet_details = AbuseIPClassification(srcs).report()
+        packet_details = AbuseIPClassification(srcs).detect()
         if not isinstance(packet_details, dict):
             for detail in packet_details:
                 host = hostname(detail["ipAddress"])
@@ -98,7 +103,7 @@ class Dashboard:
                 else f"[green]* Safe packet source {host}[/green]\n",
             )
 
-    def flush(self):
+    def flush(self) -> None:
         self.sniffer.packet_count = 0
         self.sniffer.packets = []
 
@@ -111,7 +116,7 @@ class Dashboard:
         if str(self.capture_info["history"]).count("\n") >= (self.height // 3):
             self.capture_info["history"] = Text("")
 
-    def set_capture_details(self) -> Text:
+    def set_capture_details(self) -> None:
         srcs = set()
         for packet in self.sniffer.packets:
             if not packet.haslayer(modules.IP):
@@ -175,22 +180,36 @@ class Dashboard:
 
         # Panels
         network_traffic_panel = Panel(
-            network_traffic_renderable, title="Real-time Network Traffic"
+            network_traffic_renderable,
+            title="[bold light_coral]Real-time Network Traffic[/bold light_coral]",
         )
+
         network_statistics_panel = Panel(
-            network_statistics_renderable, title="Packet Detail"
+            network_statistics_renderable,
+            title="[bold cyan]Packet Detail[/bold cyan]",
         )
+
         threat_alert_panel = Panel(
-            threat_alert_renderable, title="Threat Alerts"
-        )  # If any current threat is found.
-        packet_history_panel = Panel(packet_history_renderable, title="Packet History")
-        top_protocals_panel = Panel(top_protocals_renderable, title="Top Protocols")
+            threat_alert_renderable,
+            title="[bold red]Threat Alerts[/bold red]",
+        )
+
+        packet_history_panel = Panel(
+            packet_history_renderable,
+            title="[bold dark_sea_green]Packet History[/bold dark_sea_green]",
+        )
+
+        top_protocals_panel = Panel(
+            top_protocals_renderable,
+            title="[bold bright_green]Top Protocols[/bold bright_green]",
+        )
 
         layout.split_column(
             Layout(renderable=network_traffic_panel, name="top"),
             Layout(name="middle"),
             Layout(name="bottom"),
         )
+
         layout["middle"].split_row(
             Layout(
                 renderable=network_statistics_panel,
@@ -199,6 +218,7 @@ class Dashboard:
             ),
             Layout(renderable=threat_alert_panel, name="right"),
         )
+
         layout["bottom"].split_row(
             Layout(
                 renderable=packet_history_panel,
@@ -212,7 +232,6 @@ class Dashboard:
 
 
 class Realtime:
-    hash_name = "Realtime"
     lock_name = f"/tmp/{__name__}.lock"
 
     def __init__(
@@ -227,10 +246,10 @@ class Realtime:
         self.wait_for = wait_for
         self.verbose = verbose
         self.kwargs = kwargs
-        self.sniffer = None
         self.cache = get_cache()
+        self.history = History()
 
-        if sys.platform != "darwin":
+        if sys.platform != "darwin" and notify:
             raise OSError("Only supports notifcation for darwin systems")
 
         self.notify = notify
@@ -239,6 +258,7 @@ class Realtime:
 
         self.kwargs["verbose"] = False
         self.kwargs["is_async"] = True
+        self.sniffer = None
 
     def setup(self) -> None:
         if os.path.isfile(self.lock_name):
@@ -255,17 +275,6 @@ class Realtime:
     def signal_handler(self, *arg):
         self.cleanup()
 
-    def submit_report(
-        self, src_ip: str, dst_ip: str, timestamp: str, is_safe: bool
-    ) -> None:
-        self.cache.hset(
-            self.hash_name,
-            key=src_ip,
-            value=json.dumps(
-                {"dst_ip": dst_ip, "timestamp": timestamp, "is_safe": is_safe}
-            ),
-        )
-
     def send_notification(self, packet_src: str) -> None:
         message = f"Unsafe packet detected from {packet_src}"
         command = (
@@ -274,14 +283,15 @@ class Realtime:
         subprocess.run(shlex.split(f"osascript -e '{command}'"))
         self.notified = True
 
-    def is_submitted(self, src_ip: str) -> bool:
-        return self.cache.hexists(self.hash_name, src_ip)
-
     def dashboard(self) -> None:
         # Only for cli usage.
         Dashboard(**self.kwargs)
 
     def monitor(self) -> None:
+        """
+        Background monitor extention of `netscanner sniff`
+        saves information to redis cache and also notifies of abuse IP classifications.
+        """
         self.setup()
         console.print(
             "\n[italic]Starting sniffer and streaming packets\n",
@@ -295,18 +305,18 @@ class Realtime:
         ):
             packet = packet[modules.IP]
             # 50/50 process further or return also no duplicate src IPs stored.
-            if self.is_submitted(packet.src) or random.choice([True, False]):
+            if self.history.exists(packet.src) or random.choice([True, False]):
                 continue
 
             is_safe = (
-                AbuseIPClassification(packet.src).report()["abuseConfidenceScore"] < 50
+                AbuseIPClassification(packet.src).detect()["abuseConfidenceScore"] < 50
             )
             if not is_safe and self.notify:
                 self.send_notification(packet_src=packet.src)
 
-            self.submit_report(
-                src_ip=packet.src,
-                dst_ip=packet.dst,
+            self.history.add(
+                src=packet.src,
+                dst=packet.dst,
                 timestamp=str(datetime.now()),
                 is_safe=is_safe,
             )

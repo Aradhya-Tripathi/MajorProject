@@ -44,7 +44,6 @@ def sniff(
     extra_questions: str = None,
     send_request: bool = False,
     only_inbound: bool = False,
-    add_to_dashboard: bool = True,
     verbose: bool = typer.Option(VERBOSE, "--verbose", "-v"),
 ) -> None:
     from src.ip.sniff import Sniffer
@@ -59,7 +58,6 @@ def sniff(
         send_request=send_request,
         only_inbound=only_inbound,
         verbose=verbose,
-        add_to_dashboard=add_to_dashboard,
         show_packets=True,
     )
 

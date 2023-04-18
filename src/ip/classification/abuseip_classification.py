@@ -30,7 +30,7 @@ class AbuseIPClassification:
 
         return response["data"]
 
-    def report(self) -> dict[str, str] | map:
+    def detect(self) -> dict[str, str] | map:
         if isinstance(self.address, str):
             return self._classify(self.address)
 

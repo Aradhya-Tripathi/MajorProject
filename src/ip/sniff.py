@@ -1,5 +1,4 @@
 import binascii
-import json
 import logging
 import os
 import socket
@@ -7,7 +6,6 @@ import time
 from typing import Generator
 
 from cli.renderer import console, render_sniffed_packets
-from src.ip.model.cache import get_cache
 from src.ip.utils import QUESTIONS, private_ip, proto_lookup
 from src.utils import Timeout, convert_unix_timestamp, get_src, parse_duration
 
@@ -16,13 +14,10 @@ logging.getLogger("scapy").setLevel(logging.ERROR)
 from scapy import all as modules
 from scapy import error
 
-
 idx = -1
 
 
 class Sniffer:
-    packet_cache = "Packets"
-
     def __init__(
         self,
         sniff_count: int = 0,
@@ -33,7 +28,6 @@ class Sniffer:
         only_inbound: bool = False,
         show_packets: bool = False,
         is_async: bool = False,
-        add_to_dashboard: bool = False,
     ):
         if os.getuid() != 0:
             raise PermissionError(
@@ -48,7 +42,6 @@ class Sniffer:
         self.bp_filters = bp_filters if bp_filters else ""
         self.sniff_count = sniff_count
         self.only_inbound = only_inbound
-        self.add_to_dashboard = add_to_dashboard
         extra_questions = extra_questions if extra_questions else []
 
         self.questions = self.questions_from_sniff(extra_questions=extra_questions)
@@ -56,11 +49,8 @@ class Sniffer:
         self.packet_count = 0
         self._sniffer = None
         self.packets = []
-        self.cache = get_cache()
 
         console.print("Parameters initialized.", verbose=self.verbose, style="info")
-        if self.add_to_dashboard:
-            console.print("Storing network information", style="bold red")
         self.sniff()
 
     def stream_packets(
@@ -131,10 +121,6 @@ class Sniffer:
                     question_and_answers=question_and_answers,
                     packet_count=self.packet_count,
                 )
-
-        # Add packet to cache for history
-        if self.add_to_dashboard:
-            self.cache.rpush(self.packet_cache, json.dumps(question_and_answers))
 
     def send_network_request(self, src: str) -> None:
         """Sends http request to the specified SRC"""

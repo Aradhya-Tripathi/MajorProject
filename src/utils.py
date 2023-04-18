@@ -89,7 +89,6 @@ def parse_duration(duration: str = None) -> float:
 
 class Timeout:
     def __init__(self, seconds: int, kill_func: callable = None) -> None:
-        print("Initialized")
         self.seconds = seconds
         self.kill_func = kill_func
 

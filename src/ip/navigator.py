@@ -75,7 +75,7 @@ class Navigator:
             style="info",
             verbose=self.verbose,
         )
-        return AbuseIPClassification(address=self.ip).report()
+        return AbuseIPClassification(address=self.ip).detect()
 
     def abuse_ip_intermediate_node_classification(self) -> dict[str, str]:
         """Classifies individual intermediate node's when tracing packet route.
@@ -88,7 +88,7 @@ class Navigator:
             spinner="earth",
             verbose=self.verbose,
         ):
-            results = AbuseIPClassification(address=packet_srcs).report()
+            results = AbuseIPClassification(address=packet_srcs).detect()
 
         # Update existing results in intermediate node details fetched internally/externally,
         # with the classification from abuse IP.
@@ -138,7 +138,7 @@ inbound packets using AbuseIP...""",
             spinner="earth",
             verbose=self.verbose,
         ):
-            results = AbuseIPClassification(address=packet_srcs).report()
+            results = AbuseIPClassification(address=packet_srcs).detect()
 
         if isinstance(results, dict):
             return {results.pop("ipAddress"): results}
