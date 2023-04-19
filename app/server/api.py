@@ -1,12 +1,12 @@
 from functools import lru_cache
 
-from src.ip.navigator import Navigator
+from src.ip.analyzer import NetworkAnalyzer
 from src.ip.utils import ABUSEIP_UNWANTED
 
 
 @lru_cache(maxsize=512)
 def classify_ip(ip_address: str):
-    navigator = Navigator(ip=ip_address)
+    navigator = NetworkAnalyzer(ip=ip_address)
     classification_result = navigator.abuse_ip_address_classification()
     score = classification_result["abuseConfidenceScore"]
 
@@ -42,17 +42,19 @@ def render_df(route_details: dict[str, str]):
 
 
 def traceroute(destination_ip: str):
-    navigator = Navigator(ip=destination_ip)
+    navigator = NetworkAnalyzer(ip=destination_ip)
     route_details, _ = navigator.trace_packet_route()
     return render_df(route_details=route_details)
 
 
 def traceroute_and_classify(destination_ip: str):
-    navigator = Navigator(ip=destination_ip)
+    navigator = NetworkAnalyzer(ip=destination_ip)
     route_details = navigator.abuse_ip_intermediate_node_classification()
     return render_df(route_details=route_details)
 
 
 def network_traffic_classification(sniff_count: int):
-    packet_details = Navigator().abuse_ip_sniff_and_classify(sniff_count=sniff_count)
+    packet_details = NetworkAnalyzer().abuse_ip_sniff_and_classify(
+        sniff_count=sniff_count
+    )
     return render_df(route_details=prune_network_classification(packet_details))

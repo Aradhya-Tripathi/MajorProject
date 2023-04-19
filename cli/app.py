@@ -7,7 +7,6 @@ from cli.renderer import (
     render_chat_gpt_response,
     render_classification_panel,
     render_netscanner,
-    render_network_classification,
     render_open_ports,
     render_table_with_details,
 )
@@ -82,6 +81,7 @@ def monitor(
     duration: str = None,
     wait_for: int = 1,
     notify: bool = False,
+    store: bool = True,
     verbose: bool = typer.Option(VERBOSE, "--verbose", "-v"),
 ) -> None:
     from src.ip.realtime import Realtime
@@ -94,16 +94,16 @@ def monitor(
         notify=notify,
         verbose=verbose,
         **kwargs,
-    ).monitor()
+    ).monitor(store=store)
 
 
 @app.command()
 def traceroute(
     destination: str, verbose: bool = typer.Option(VERBOSE, "--verbose", "-v")
 ) -> None:
-    from src.ip.navigator import Navigator
+    from src.ip.analyzer import NetworkAnalyzer
 
-    intermediate_node_details, _ = Navigator(
+    intermediate_node_details, _ = NetworkAnalyzer(
         ip=destination, verbose=verbose
     ).trace_packet_route()
 
@@ -121,9 +121,9 @@ def ip_address(
     use_gpt: bool = typer.Option(False, "--use-gpt", "-gpt"),
     timeout: int = None,
 ) -> None:
-    from src.ip.navigator import Navigator
+    from src.ip.analyzer import NetworkAnalyzer
 
-    classification_results = Navigator(
+    classification_results = NetworkAnalyzer(
         ip=request_to, verbose=verbose
     ).abuse_ip_address_classification()
 
@@ -151,10 +151,10 @@ def intermediate_node(
     use_gpt: bool = typer.Option(False, "--use-gpt", "-gpt"),
     timeout: int = None,
 ) -> None:
-    from src.ip.navigator import Navigator
+    from src.ip.analyzer import NetworkAnalyzer
 
     with Timeout(seconds=timeout):
-        intermediate_node_details = Navigator(
+        intermediate_node_details = NetworkAnalyzer(
             ip=destination, verbose=verbose
         ).abuse_ip_intermediate_node_classification()
 
@@ -170,20 +170,6 @@ def intermediate_node(
                     ip_addresses=intermediate_node_details.keys(), verbose=verbose
                 )
             )
-
-
-@classify.command()
-def network_traffic(
-    sniff_count: int = 10,
-    connection_type: str = "tcp",
-    verbose: bool = typer.Option(VERBOSE, "--verbose", "-v"),
-) -> None:
-    from src.ip.navigator import Navigator
-
-    classified_packets = Navigator(verbose=verbose).abuse_ip_sniff_and_classify(
-        sniff_count=sniff_count, connection_type=connection_type
-    )
-    render_network_classification(intermediate_node_details=classified_packets)
 
 
 @utility.command()
@@ -202,9 +188,9 @@ def public_ip() -> None:
 
 @utility.command()
 def get_ip_address(domain: str) -> None:
-    from src.ip.navigator import Navigator
+    from src.ip.analyzer import NetworkAnalyzer
 
-    print(Navigator(ip=domain).ip)
+    print(NetworkAnalyzer(ip=domain).ip)
 
 
 @utility.command()

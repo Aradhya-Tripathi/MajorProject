@@ -17,21 +17,25 @@ from rich.live import Live
 from rich.panel import Panel
 from rich.style import Style
 from rich.text import Text
-
 from scapy import all as modules
 
 from cli.renderer import console
 from src.ip.classification.abuseip_classification import AbuseIPClassification
+from src.ip.history import History
 from src.ip.model.cache import get_cache
 from src.ip.sniff import Sniffer
 from src.ip.utils import hostname
 from src.utils import parse_duration
 
-from src.ip.history import History
-
 
 class Dashboard:
-    def __init__(self, duration: str = None, wait_for: int = 1, **kwargs) -> None:
+    def __init__(
+        self,
+        duration: str = None,
+        wait_for: int = 1,
+        capture_duration: str = "0.5 second",
+        **kwargs,
+    ) -> None:
         self.duration = duration
         self.wait_for = wait_for
         self._precision = 3
@@ -39,6 +43,7 @@ class Dashboard:
         self.width, self.height = console.size.width, console.size.height
         self.middle_column_ratio = 2
         self.bottom_column_ratio = 3
+        self.capture_duration = capture_duration
         self.plot_configs = {
             "max": self.height // 3,  # Divided into 3 columns
             "min": 0,
@@ -46,8 +51,6 @@ class Dashboard:
             "width": self.width,
         }
         self.capture_rates = []
-        # Implement this so that srcs present in this don't go for classification again
-        self.classified = []
         self.protocals = (
             {}
         )  # This is here since packet count ins't just for the capture duration
@@ -59,14 +62,14 @@ class Dashboard:
         self.sniffer = Sniffer(**kwargs)
         self.render()
 
-    def capture_statistics(self, capture_duration: str = "0.5 second") -> float:
+    def capture_statistics(self) -> float:
         # Reset all defaults.
         self.flush()
-        time.sleep(parse_duration(capture_duration))
+        time.sleep(parse_duration(self.capture_duration))
         self.set_capture_details()
         return self.get_network_traffic(
             round(
-                self.sniffer.packet_count / parse_duration(capture_duration),
+                self.sniffer.packet_count / parse_duration(self.capture_duration),
                 self._precision,
             )
         )
@@ -88,7 +91,6 @@ class Dashboard:
         if not isinstance(packet_details, dict):
             for detail in packet_details:
                 host = hostname(detail["ipAddress"])
-                self.classified.append(host)
                 self.capture_info["threats"] += Text.from_markup(
                     f"[bold red]* Unsafe packet source {host}[/bold red]\n"
                     if detail["abuseConfidenceScore"] > 50
@@ -96,7 +98,6 @@ class Dashboard:
                 )
         else:
             host = hostname(packet_details["ipAddress"])
-            self.classified.append(host)
             self.capture_info["threats"] += Text.from_markup(
                 f"[bold red]* Unsafe packet source {host}[/bold red]\n"
                 if packet_details["abuseConfidenceScore"] > 50
@@ -166,6 +167,7 @@ class Dashboard:
                         refresh=True,
                     )
             except KeyboardInterrupt:
+                console.print("Safely shutting down the sniffer...", style="info")
                 self.sniffer.stop()
 
     def get_dashboard(
@@ -186,7 +188,7 @@ class Dashboard:
 
         network_statistics_panel = Panel(
             network_statistics_renderable,
-            title="[bold cyan]Packet Detail[/bold cyan]",
+            title="[bold cyan]Packet History[/bold cyan]",
         )
 
         threat_alert_panel = Panel(
@@ -196,7 +198,7 @@ class Dashboard:
 
         packet_history_panel = Panel(
             packet_history_renderable,
-            title="[bold dark_sea_green]Packet History[/bold dark_sea_green]",
+            title="[bold dark_sea_green]Packet Details[/bold dark_sea_green]",
         )
 
         top_protocals_panel = Panel(
@@ -253,10 +255,7 @@ class Realtime:
             raise OSError("Only supports notifcation for darwin systems")
 
         self.notify = notify
-        for request in ["show_packets", "send_request"]:
-            self.kwargs.pop(request, None)
 
-        self.kwargs["verbose"] = False
         self.kwargs["is_async"] = True
         self.sniffer = None
 
@@ -287,11 +286,14 @@ class Realtime:
         # Only for cli usage.
         Dashboard(**self.kwargs)
 
-    def monitor(self) -> None:
+    def monitor(self, store: bool = True) -> None:
         """
         Background monitor extention of `netscanner sniff`
         saves information to redis cache and also notifies of abuse IP classifications.
         """
+        if store:
+            console.print("[red bold]Storing network details")
+
         self.setup()
         console.print(
             "\n[italic]Starting sniffer and streaming packets\n",
@@ -314,12 +316,14 @@ class Realtime:
             if not is_safe and self.notify:
                 self.send_notification(packet_src=packet.src)
 
-            self.history.add(
-                src=packet.src,
-                dst=packet.dst,
-                timestamp=str(datetime.now()),
-                is_safe=is_safe,
-            )
+            if store:
+                self.history.add(
+                    src=packet.src,
+                    dst=packet.dst,
+                    timestamp=str(datetime.now()),
+                    is_safe=is_safe,
+                )
+
         # If stopped via timeout.
         self.cleanup()
 

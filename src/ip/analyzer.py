@@ -6,18 +6,16 @@ from scapy import all as modules
 from src.ip.classification.abuseip_classification import AbuseIPClassification
 from src.ip.model.data import primary_details_source
 from src.ip.utils import public_ip
-from src.ip.sniff import Sniffer
 from cli.renderer import console
 
 
-class Navigator:
+class NetworkAnalyzer:
     """
     Currently all APIs only support iPv4.
     """
 
     def __init__(self, ip: str = None, verbose: bool = False) -> None:
-        if ip:
-            self.ip = self.get_ip_address(ip=ip)
+        self.ip = self.get_ip_address(ip=ip)
         self.verbose = verbose
 
     def get_ip_address(self, ip: str) -> str:
@@ -104,49 +102,6 @@ class Navigator:
             )
 
         return intermediate_node_details
-
-    def abuse_ip_sniff_and_classify(
-        self, connection_type: str = "tcp", sniff_count: int = 10
-    ) -> dict[str, dict[str, str]]:
-        classified_packets = {}
-
-        sniffer = Sniffer(
-            sniff_count=sniff_count,
-            bp_filters=connection_type,
-            verbose=self.verbose,
-            only_inbound=True,
-        )
-
-        packets = sniffer.get_packets()
-        packet_srcs = [packet[modules.IP].src for packet in packets]
-
-        if sniff_count == 1:
-            packet_srcs = packet_srcs[0]
-
-        else:
-            console.print(
-                "Removing all duplicate IP addresses",
-                style="info",
-                verbose=self.verbose,
-            )
-            packet_srcs = set(packet_srcs)
-
-        # Removes all duplicate packets (don't want to spam the api)
-        with console.status(
-            f"""[cyan]Classifying {len(packet_srcs) if isinstance(packet_srcs, list) else 1}
-inbound packets using AbuseIP...""",
-            spinner="earth",
-            verbose=self.verbose,
-        ):
-            results = AbuseIPClassification(address=packet_srcs).detect()
-
-        if isinstance(results, dict):
-            return {results.pop("ipAddress"): results}
-
-        for result in results:
-            classified_packets[result.pop("ipAddress")] = result
-
-        return classified_packets
 
 
 if __name__ == "__main__":
