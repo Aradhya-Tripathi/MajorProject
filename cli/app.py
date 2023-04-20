@@ -64,13 +64,20 @@ def sniff(
 @realtime.command(
     context_settings={"allow_extra_args": True, "ignore_unknown_options": True}
 )
-def dashboard(ctx: typer.Context, verbose: bool = VERBOSE) -> None:
+def dashboard(
+    ctx: typer.Context,
+    capture_duration: str = "0.5 second",
+    classification_rate: float = 0.5,
+    verbose: bool = typer.Option(VERBOSE, "--verbose", "-v"),
+) -> None:
     from src.ip.realtime import Realtime
 
     kwargs = {}
     extra_kwargs(ctx, kwargs)
 
-    Realtime(verbose=verbose, **kwargs).dashboard()
+    Realtime(
+        classification_rate=classification_rate, verbose=verbose, **kwargs
+    ).dashboard(capture_duration=capture_duration)
 
 
 @realtime.command(
@@ -81,7 +88,7 @@ def monitor(
     duration: str = None,
     wait_for: int = 1,
     notify: bool = False,
-    store: bool = True,
+    classification_rate: float = 0.5,
     verbose: bool = typer.Option(VERBOSE, "--verbose", "-v"),
 ) -> None:
     from src.ip.realtime import Realtime
@@ -92,9 +99,10 @@ def monitor(
         duration=duration,
         wait_for=wait_for,
         notify=notify,
+        classification_rate=classification_rate,
         verbose=verbose,
         **kwargs,
-    ).monitor(store=store)
+    ).monitor()
 
 
 @app.command()
