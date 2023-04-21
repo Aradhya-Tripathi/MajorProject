@@ -48,9 +48,7 @@ class Dashboard:
             "width": self.width,
         }
         self.capture_rates = []
-        self.protocals = (
-            {}
-        )  # This is here since packet count ins't just for the capture duration
+        self.protocals = {}
         self.sports = {}
         self.dports = {}
         self.sources = {}
@@ -340,7 +338,7 @@ class Realtime:
             f'display notification "{message}" with title "Unsafe packet detected"'
         )
         subprocess.run(shlex.split(f"osascript -e '{command}'"))
-        self.notified = True
+        self.classified_packets[packet_src]["notified"] = True
 
     def dashboard(self, capture_duration: str = "0.5 second") -> None:
         # Only for cli usage.
@@ -352,9 +350,12 @@ class Realtime:
 
     def is_safe(self, src: str) -> bool:
         if src not in self.classified_packets:
-            self.classified_packets[src] = (
-                AbuseIPClassification(src).detect()["abuseConfidenceScore"] < 50
-            )
+            self.classified_packets[src] = {
+                "is_safe": (
+                    AbuseIPClassification(src).detect()["abuseConfidenceScore"] < 50
+                ),
+                "notified": False,
+            }
         return self.classified_packets[src]
 
     def monitor(self) -> None:
@@ -376,12 +377,16 @@ class Realtime:
             duration=self.duration, wait_for=self.wait_for
         ):
             packet = packet[modules.IP]
-
-            if not (random.random() < self.classification_rate):
+            if random.random() > self.classification_rate:
                 continue
 
             _is_safe = self.is_safe(packet.src)
-            if not _is_safe and self.notify:
+
+            if (
+                not _is_safe
+                and self.notify
+                and not self.classified_packets[packet.src]["notified"]
+            ):
                 self.send_notification(packet_src=packet.src)
 
         # If stopped via timeout.

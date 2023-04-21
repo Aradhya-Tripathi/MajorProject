@@ -22,4 +22,4 @@ sudo netscanner realtime monitor --only-inbound true --bp-filters "tcp" --notify
 # Realtime Dashbaord
 sudo netscanner realtime dashboard
 
-# Visit https://www.abuseipdb.com/check/158.69.111.17 during report
+# Visit https://www.abuseipdb.com/check/158.69.111.17 during monitor
