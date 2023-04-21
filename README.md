@@ -1,5 +1,9 @@
 # Major Project (NIDS)
 
-### Easy install
+# Dashboard
 
-curl https://pastebin.com/raw/UFShrZ8g | python <path-to-install>
+![](./docs/Dashboard-Realtime.png)
+
+# Traceroute
+
+![](./docs/Traceroute.png)

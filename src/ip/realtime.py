@@ -77,40 +77,30 @@ class Dashboard:
 
     def flush(self) -> None:
         self.sniffer.packet_count = 0
-        self.sniffer.packets = []
+        self.sniffer.packets.clear()
 
-        if len(self.capture_rates) > (self.width - self._transient_factor):
-            self.capture_rates = []
+        self.clear_capture_info("threats", self.height // self.middle_column_ratio)
+        self.clear_capture_info("details", self.height // self.middle_column_ratio)
+        self.clear_top_info(
+            "top_dports", self.dports, self.height // self.middle_column_ratio + 1
+        )
+        self.clear_top_info(
+            "top_sports", self.sports, self.height // self.middle_column_ratio + 1
+        )
+        self.clear_top_info(
+            "top_protocals", self.protocals, self.height // self.middle_column_ratio + 1
+        )
+        self.clear_top_info(
+            "top_sources", self.sources, self.height // self.middle_column_ratio + 1
+        )
 
-        if str(self.capture_info["threats"]).count("\n") >= (
-            self.height // self.middle_column_ratio
-        ):
-            self.capture_info["threats"] = Text("")
+    def clear_capture_info(self, info_name: str, max_lines: int) -> None:
+        if str(self.capture_info[info_name]).count("\n") >= max_lines:
+            self.capture_info[info_name] = Text("")
 
-        if str(self.capture_info["details"]).count("\n") >= (
-            self.height // self.middle_column_ratio
-        ):
-            self.capture_info["details"] = Text("")
-
-        if str(self.capture_info["top_dports"]).count("\n") >= (
-            self.height // self.middle_column_ratio + 1
-        ):
-            self.dports = {}
-
-        if str(self.capture_info["top_sports"]).count("\n") >= (
-            self.height // self.middle_column_ratio + 1
-        ):
-            self.sports = {}
-
-        if str(self.capture_info["top_protocals"]).count("\n") >= (
-            self.height // self.middle_column_ratio + 1
-        ):
-            self.protocals = {}
-
-        if str(self.capture_info["top_sources"]).count("\n") >= (
-            self.height // self.middle_column_ratio + 1
-        ):
-            self.sources = {}
+    def clear_top_info(self, info_name: str, info_dict: dict, max_lines: int) -> None:
+        if str(self.capture_info[info_name]).count("\n") >= max_lines:
+            info_dict.clear()
 
     def _sort(self, data: dict[str, Any | str]) -> None:
         _sorted_item = {
