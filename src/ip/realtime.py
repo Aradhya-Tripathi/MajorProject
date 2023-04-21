@@ -348,7 +348,7 @@ class Realtime:
             **self.kwargs,
         )
 
-    def is_safe(self, src: str) -> bool:
+    def _classify(self, src: str) -> bool:
         if src not in self.classified_packets:
             self.classified_packets[src] = {
                 "is_safe": (
@@ -380,12 +380,11 @@ class Realtime:
             if random.random() > self.classification_rate:
                 continue
 
-            _is_safe = self.is_safe(packet.src)
-
+            classification = self._classify(src=packet.src)
             if (
-                not _is_safe
+                not classification["is_safe"]
                 and self.notify
-                and not self.classified_packets[packet.src]["notified"]
+                and not classification["notified"]
             ):
                 self.send_notification(packet_src=packet.src)
 
