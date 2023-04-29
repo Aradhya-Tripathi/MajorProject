@@ -79,6 +79,9 @@ class Dashboard:
         self.sniffer.packet_count = 0
         self.sniffer.packets.clear()
 
+        if len(self.capture_rates) > (self.width - self._transient_factor):
+            self.capture_rates = []
+
         self.clear_capture_info("threats", self.height // self.middle_column_ratio)
         self.clear_capture_info("details", self.height // self.middle_column_ratio)
         self.clear_top_info(

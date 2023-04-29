@@ -105,4 +105,4 @@ class NetworkAnalyzer:
 
 
 if __name__ == "__main__":
-    Navigator("facebook.com").abuse_ip_address_classification()
+    NetworkAnalyzer("facebook.com").abuse_ip_address_classification()
