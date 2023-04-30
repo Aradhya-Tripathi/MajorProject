@@ -161,7 +161,7 @@ class Dashboard:
         return graph
 
     def get_threats(self, srcs: set) -> None:
-        if not (random.random() < self.classification_rate):
+        if random.random() > self.classification_rate:
             return
 
         packet_details = AbuseIPClassification(srcs).detect()
