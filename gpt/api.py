@@ -3,6 +3,9 @@ import os
 from cli.renderer import console
 from gpt import chat_session
 
+if os.getenv("chatapi").strip().lower() == "none":
+    raise Exception("You need to add your chat-gpt api key to access this!")
+
 BASE_URL = "https://api.openai.com/v1/chat/completions"
 HEADERS = {
     "Content-Type": "application/json",

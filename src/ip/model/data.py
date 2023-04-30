@@ -8,16 +8,31 @@ from rich.progress import track
 from src.ip.utils import redundant_api_ip_details
 from cli.renderer import console
 
-storage = pymongo.MongoClient(os.getenv("ip2location"))
+
+storage_url = os.getenv("ip2location")
+NO_DATABASE = False
+
+if storage_url.strip().lower() == "none":
+    NO_DATABASE = True
+
+else:
+    storage = pymongo.MongoClient(storage_url)
 
 
 def primary_details_source(ip_list: list[str]) -> dict[str, str]:
     intermediate_node_details = {}
     unanswered = []
 
+    if NO_DATABASE:
+        console.print("Using API service for location information...", style="info")
+        redundant_api_ip_details(
+            ip_list=ip_list, intermediate_node_details=intermediate_node_details
+        )
+        return intermediate_node_details
+
     for ip in track(
         ip_list,
-        description="[cyan]Querying location databases...",
+        description="[cyan]Fetching location information...",
         console=console,
         show_speed=False,
         transient=False,

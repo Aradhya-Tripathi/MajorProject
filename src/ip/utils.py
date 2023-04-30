@@ -88,9 +88,6 @@ def redundant_api_ip_details(
 ) -> dict[str, str]:
     from src.ip import session
 
-    console.print(
-        "[red][bold]Some IP locations were not found in the databases querying esternal services..."
-    )
     response = session.post(
         "http://ip-api.com/batch", json=[{"query": ip} for ip in ip_list]
     )
@@ -102,7 +99,6 @@ def redundant_api_ip_details(
         exit(-1)
 
     response = response.json()
-    console.print("Found results using external services!", style="info")
     for idx, res in enumerate(response, start=0):
         intermediate_node_details[ip_list[idx]] = dict(
             country_name=res.get("country"),
@@ -110,7 +106,7 @@ def redundant_api_ip_details(
             city_name=res.get("city"),
             latitude=res.get("lat"),
             longitude=res.get("lon"),
-            field8=res.get("zip"),
+            zip_code=res.get("zip"),
         )
 
 
