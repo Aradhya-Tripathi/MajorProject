@@ -146,10 +146,16 @@ class Dashboard:
         self.get_threats(srcs=srcs)
 
         for info in ["protocals", "dports", "sports", "sources"]:
+            if info == "protocals" or info == "sources":
+                color = "magenta"
+            elif info == "dports":
+                color = "green"
+            else:
+                color = "cyan"
             self.capture_info["top_" + info] = Text(
                 self._format_dict_to_str(self._sort(data=getattr(self, info))),
                 justify="center",
-                style="light_green",
+                style=color,
             )
 
     def get_network_traffic(self, capture_rate: float) -> str:
@@ -211,29 +217,34 @@ class Dashboard:
         threat_alert_panel = Panel(
             threat_alert_renderable,
             title="[bold red]Threat Alerts[/bold red]",
+            border_style="bright_black",
             box=box.HEAVY,
         )
 
         top_protocals_panel = Panel(
             top_protocals_renderable,
             title="[bold cyan]Top Protocols[/bold cyan]",
+            border_style="bright_black",
             box=box.HEAVY,
         )
 
         top_dports_panel = Panel(
             top_dports_renderable,
             title="[bold cyan]Top Destination Ports[/bold cyan]",
+            border_style="bright_black",
             box=box.HEAVY,
         )
         top_sports_panel = Panel(
             top_sports_renderable,
             title="[bold cyan]Top Source Ports[/bold cyan]",
+            border_style="bright_black",
             box=box.HEAVY,
         )
 
         top_sources_panel = Panel(
             top_sources_renderable,
             title="[bold cyan]Top Sources[/bold cyan]",
+            border_style="bright_black",
             box=box.HEAVY,
         )
 
