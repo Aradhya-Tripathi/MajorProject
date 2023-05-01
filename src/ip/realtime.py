@@ -18,13 +18,12 @@ from rich.live import Live
 from rich.panel import Panel
 from rich.style import Style
 from rich.text import Text
-
 from scapy import all as modules
 
 from cli.renderer import console
 from src.ip.classification.abuseip_classification import AbuseIPClassification
 from src.ip.sniff import Sniffer
-from src.ip.utils import hostname
+from src.ip.utils import PORT_MAPPINGS, hostname
 from src.utils import parse_duration
 
 
@@ -59,6 +58,12 @@ class Dashboard:
             "top_dports": Text(""),
             "top_sports": Text(""),
             "top_sources": Text(""),
+        }
+        self.color_map = {
+            "protocals": "magenta",
+            "sources": "magenta",
+            "dports": "green",
+            "sports": "cyan",
         }
         self.sniffer = Sniffer(**kwargs)
         self.render()
@@ -128,13 +133,18 @@ class Dashboard:
             srcs.add(packet.src)
             proto = self.sniffer.proto_lookup_table[packet.proto]
             src = hostname(packet.src)
+
             self.protocals[proto] = self.protocals.get(proto, 0) + 1
             self.sources[src] = self.sources.get(src, 0) + 1
+
             try:
-                self.dports[packet.dport] = self.dports.get(packet.dport, 0) + 1
-                self.sports[packet.sport] = self.sports.get(packet.sport, 0) + 1
+                dport = PORT_MAPPINGS.get(packet.dport, packet.dport)
+                sport = PORT_MAPPINGS.get(packet.sport, packet.sport)
+                self.dports[dport] = self.dports.get(dport, 0) + 1
+                self.sports[sport] = self.sports.get(sport, 0) + 1
             except AttributeError:
                 ...
+
             self.capture_info["details"] += Text(
                 f"""* Source {hostname(packet.src)} - Destination {hostname(packet.dst)}\
  - Port(s/d) {getattr(packet, 'sport', 'N/A')}\
@@ -146,16 +156,10 @@ class Dashboard:
         self.get_threats(srcs=srcs)
 
         for info in ["protocals", "dports", "sports", "sources"]:
-            if info == "protocals" or info == "sources":
-                color = "magenta"
-            elif info == "dports":
-                color = "green"
-            else:
-                color = "cyan"
             self.capture_info["top_" + info] = Text(
                 self._format_dict_to_str(self._sort(data=getattr(self, info))),
                 justify="center",
-                style=color,
+                style=self.color_map[info],
             )
 
     def get_network_traffic(self, capture_rate: float) -> str:
@@ -273,7 +277,7 @@ class Dashboard:
         return layout
 
     def render(self) -> None:
-        with Live(auto_refresh=False, screen=True) as live:
+        with Live(auto_refresh=False, screen=False) as live:
             try:
                 while True:
                     network_traffic = self.capture_statistics()

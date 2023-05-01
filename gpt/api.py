@@ -68,9 +68,6 @@ def port_usages(ports: list[str], verbose: bool = False) -> str:
 def intermediate_nodes(ip_addresses: list[str], verbose: bool = False) -> str:
     prompt = f"""I need your help in finding out information about the following IP addresses:
      {", ".join(ip_addresses)}
-
-    Please provide some contextual information about these IP addresses as well.
-    Please be brief.
 """
     data = get_data(prompt=prompt)
 

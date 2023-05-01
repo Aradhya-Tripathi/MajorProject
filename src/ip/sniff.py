@@ -6,7 +6,7 @@ import time
 from typing import Generator
 
 from cli.renderer import console, render_sniffed_packets
-from src.ip.utils import QUESTIONS, private_ip, proto_lookup
+from src.ip.utils import PORT_MAPPINGS, QUESTIONS, hostname, private_ip, proto_lookup
 from src.utils import Timeout, convert_unix_timestamp, get_src, parse_duration
 
 logging.getLogger("scapy").setLevel(logging.ERROR)
@@ -87,6 +87,9 @@ class Sniffer:
         self.packet_count += 1
         ip_packet = packet[modules.IP]
 
+        if not self.show_packets:
+            return
+
         for question in self.questions:
             try:
                 if question == "proto":
@@ -116,11 +119,10 @@ class Sniffer:
             except (IndexError, AttributeError) as e:
                 console.print(f"Invalid packet! {e}", style="bold red")
 
-            if self.show_packets:
-                render_sniffed_packets(
-                    question_and_answers=question_and_answers,
-                    packet_count=self.packet_count,
-                )
+        render_sniffed_packets(
+            question_and_answers=question_and_answers,
+            packet_count=self.packet_count,
+        )
 
     def send_network_request(self, src: str) -> None:
         """Sends http request to the specified SRC"""

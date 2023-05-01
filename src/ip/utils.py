@@ -30,13 +30,69 @@ ABUSEIP_UNWANTED = [
     "isWhitelisted",
 ]
 
-COMMON_PORT_USAGES = {
-    "20": "FTP",
-    "21": "SFTP",
-    "22": "SSH",
-    "25": "SMTP",
-    "80": "HTTP",
-    "443": "HTTPS",
+
+PORT_MAPPINGS = {
+    80: "http",
+    25: "smtp",
+    79: "finger",
+    53: "domain",
+    113: "auth",
+    23: "telnet",
+    21: "ftp",
+    144: "eco_i",
+    123: "ntp_u",
+    255: "ecr_i",
+    0: "private",
+    110: "pop_3",
+    20: "ftp_data",
+    77: "rje",
+    37: "tim_i",
+    57: "mtp",
+    245: "link",
+    87: "remote_job",
+    70: "gopher",
+    22: "ssh",
+    42: "name",
+    43: "whois",
+    513: "login",
+    143: "imap4",
+    13: "daytime",
+    105: "csnet_ns",
+    119: "nnsp",
+    514: "shell",
+    194: "IRC",
+    443: "http_443",
+    512: "exec",
+    515: "printer",
+    520: "efs",
+    530: "courier",
+    540: "uucp",
+    543: "klogin",
+    544: "kshell",
+    7: "echo",
+    9: "discard",
+    11: "systat",
+    95: "supdup",
+    102: "iso_tsap",
+    101: "hostnames",
+    109: "pop_2",
+    111: "sunrpc",
+    117: "uucp_path",
+    137: "netbios_ns",
+    139: "netbios_ssn",
+    138: "netbios_dgm",
+    118: "sql_net",
+    2389: "vmnet",
+    179: "bgp",
+    210: "Z39_50",
+    389: "ldap",
+    15: "netstat",
+    1190: "urh_i",
+    6000: "X11",
+    556: "urp_i",
+    1001: "pm_dump",
+    69: "tftp_u",
+    112: "red_i",
 }
 
 
@@ -127,7 +183,7 @@ def ports_in_use(
         if sock.connect_ex((host, port)) == 0:
             port = str(port)
             lock.acquire()
-            ports[port] = COMMON_PORT_USAGES.get(port, "Unknown")
+            ports[port] = PORT_MAPPINGS.get(port, "Unknown")
             lock.release()
 
     with console.status(
