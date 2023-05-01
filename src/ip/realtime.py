@@ -185,10 +185,10 @@ class Dashboard:
         if random.random() > self.classification_rate:
             return
 
-        packet_details = AbuseIPClassification(srcs).detect()
-        model_prediction = model.predict(packets=packets)
-        if model_prediction:
-            packet_details["decision_tree"] = model_prediction
+        packet_details, _ = (
+            AbuseIPClassification(srcs).detect(),
+            model.predict(packets=packets),
+        )
 
         if not isinstance(packet_details, dict):
             for detail in packet_details:
