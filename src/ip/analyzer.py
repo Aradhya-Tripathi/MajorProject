@@ -3,7 +3,7 @@ import socket
 
 from scapy import all as modules
 
-from src.ip.classification.abuseip_classification import AbuseIPClassification
+from src.ip.classification.abuseip import AbuseIPClassification
 from src.ip.model.data import primary_details_source
 from src.ip.utils import public_ip
 from cli.renderer import console

@@ -21,7 +21,8 @@ from rich.text import Text
 from scapy import all as modules
 
 from cli.renderer import console
-from src.ip.classification.abuseip_classification import AbuseIPClassification
+from src.ip.classification import model
+from src.ip.classification.abuseip import AbuseIPClassification
 from src.ip.sniff import Sniffer
 from src.ip.utils import PORT_MAPPINGS, hostname
 from src.utils import parse_duration
@@ -125,6 +126,7 @@ class Dashboard:
 
     def set_capture_details(self) -> None:
         srcs = set()
+        packets_for_model = []
         for packet in self.sniffer.packets:
             if not packet.haslayer(modules.IP):
                 continue
@@ -152,8 +154,17 @@ class Dashboard:
                 style="cyan",
                 justify="center",
             )
+            packets_for_model.append(
+                [
+                    proto,
+                    packet.flags,
+                    len(packet.load) if hasattr(packet, "load") else 0,
+                    len(packet.payload) if hasattr(packet, "payload") else 0,
+                    packet[modules.TCP].urgptr if packet.haslayer(modules.TCP) else 0,
+                ]
+            )
 
-        self.get_threats(srcs=srcs)
+        self.get_threats(srcs=srcs, packets=packets_for_model)
 
         for info in ["protocals", "dports", "sports", "sources"]:
             self.capture_info["top_" + info] = Text(
@@ -170,11 +181,15 @@ class Dashboard:
         )
         return graph
 
-    def get_threats(self, srcs: set) -> None:
+    def get_threats(self, srcs: set, packets: list[modules.Packet]) -> None:
         if random.random() > self.classification_rate:
             return
 
         packet_details = AbuseIPClassification(srcs).detect()
+        model_prediction = model.predict(packets=packets)
+        if model_prediction:
+            packet_details["decision_tree"] = model_prediction
+
         if not isinstance(packet_details, dict):
             for detail in packet_details:
                 host = hostname(detail["ipAddress"])
