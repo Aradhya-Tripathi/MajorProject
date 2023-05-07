@@ -21,7 +21,8 @@ from rich.text import Text
 from scapy import all as modules
 
 from cli.renderer import console
-from src.ip.classification import model
+
+# from src.ip.classification import model
 from src.ip.classification.abuseip import AbuseIPClassification
 from src.ip.sniff import Sniffer
 from src.ip.utils import PORT_MAPPINGS, hostname
@@ -185,23 +186,21 @@ class Dashboard:
         if random.random() > self.classification_rate:
             return
 
-        packet_details, _ = (
-            AbuseIPClassification(srcs).detect(),
-            model.predict(packets=packets),
-        )
+        packet_details = AbuseIPClassification(srcs).detect()
+        # model.predict(packets=packets),
 
         if not isinstance(packet_details, dict):
             for detail in packet_details:
                 host = hostname(detail["ipAddress"])
                 self.capture_info["threats"] += Text.from_markup(
-                    f"[bold red]* Unsafe packet source {host}[/bold red]\n"
+                    f"[blink bold red]* Unsafe packet source {host}[/blink bold red]\n"
                     if detail["abuseConfidenceScore"] > 50
                     else f"[cyan]* Safe packet source {host}[/cyan]\n",
                 )
         else:
             host = hostname(packet_details["ipAddress"])
             self.capture_info["threats"] += Text.from_markup(
-                f"[bold red]* Unsafe packet source {host}[/bold red]\n"
+                f"[blink bold red]* Unsafe packet source {host}[/blink bold red]\n"
                 if packet_details["abuseConfidenceScore"] > 50
                 else f"[green]* Safe packet source {host}[/green]\n",
             )

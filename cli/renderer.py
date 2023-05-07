@@ -106,7 +106,7 @@ def render_table_with_details(
     intermediate_node_details: dict[str, dict[str, str]],
     box: rich_box.Box = rich_box.HEAVY_HEAD,
 ) -> None:
-    colors = ["cyan", "blink cyan", "magenta", "green"]
+    colors = ["cyan", "cyan", "magenta", "green"]
     init_columns = False
     table = Table(
         title=f"[green]Network Topology",

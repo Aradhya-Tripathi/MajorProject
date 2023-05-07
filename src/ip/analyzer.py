@@ -3,10 +3,10 @@ import socket
 
 from scapy import all as modules
 
+from cli.renderer import console
 from src.ip.classification.abuseip import AbuseIPClassification
 from src.ip.model.data import primary_details_source
 from src.ip.utils import public_ip
-from cli.renderer import console
 
 
 class NetworkAnalyzer:
@@ -15,6 +15,7 @@ class NetworkAnalyzer:
     """
 
     def __init__(self, ip: str = None, verbose: bool = False) -> None:
+        self.domain = ip
         self.ip = self.get_ip_address(ip=ip)
         self.verbose = verbose
 
@@ -36,7 +37,7 @@ class NetworkAnalyzer:
         utilizing external API for IP geo location returns dict of location and IP details.
         """
         with console.status(
-            f"Packets being transfered to [bold]{self.ip}...",
+            f"Packets being transfered to {self.domain} ([bold]{self.ip})...",
             spinner="bouncingBall",
             spinner_style="cyan",
             verbose=self.verbose,
@@ -105,4 +106,8 @@ class NetworkAnalyzer:
 
 
 if __name__ == "__main__":
-    NetworkAnalyzer("facebook.com").abuse_ip_address_classification()
+    from cli.renderer import render_table_with_details
+
+    route, _ = NetworkAnalyzer("facebook.com", verbose=True).trace_packet_route()
+
+    render_table_with_details(route)
