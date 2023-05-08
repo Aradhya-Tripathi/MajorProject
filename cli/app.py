@@ -32,6 +32,16 @@ def extra_kwargs(ctx, kwargs: dict[any, any]):
         value = ctx.args[i + 1]
         kwargs[key] = value
 
+    parse_kwargs(kwargs)
+
+
+def parse_kwargs(kwargs: dict[str, str]) -> None:
+    for k, v in kwargs.items():
+        try:
+            kwargs[k] = eval(v)
+        except Exception:
+            ...
+
 
 ######################## Sniff Command ########################
 

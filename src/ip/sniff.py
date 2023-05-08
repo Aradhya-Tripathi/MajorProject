@@ -29,7 +29,7 @@ class Sniffer:
         only_inbound: bool = False,
         show_packets: bool = False,
         is_async: bool = False,
-        record: bool = True,
+        record: bool = False,
     ):
         if os.getuid() != 0:
             raise PermissionError(

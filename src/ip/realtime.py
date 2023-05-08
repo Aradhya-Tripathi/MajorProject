@@ -21,7 +21,6 @@ from rich.style import Style
 from rich.text import Text
 from cli.renderer import console
 
-
 from scapy import all as modules
 
 # from src.ip.classification import model
@@ -69,6 +68,7 @@ class Dashboard:
             "dports": "green",
             "sports": "cyan",
         }
+        kwargs.pop("show_packets", None)
         self.sniffer = Sniffer(**kwargs)
         self.render()
 
@@ -395,34 +395,40 @@ terminal bell will still work if supported by the terminal""",
 
         classification_rate: percentage of packets that are classified (defaults to 50%)
         """
-        self.setup()
-        console.print(
-            f"\n[italic]Monitoring with a classification rate of {self.classification_rate * 100}%\n",
-            style="info",
-            verbose=self.verbose,
-        )
-        self.sniffer = Sniffer(**self.kwargs, verbose=self.verbose)
+        try:
+            self.setup()
+            console.print(
+                f"\n[italic]Monitoring with a classification rate of {self.classification_rate * 100}%\n",
+                style="info",
+                verbose=self.verbose,
+            )
+            self.sniffer = Sniffer(**self.kwargs, verbose=self.verbose)
 
-        for packet in self.sniffer.stream_packets(
-            duration=self.duration, wait_for=self.wait_for
-        ):
-            packet = packet[modules.IP]
-            if random.random() > self.classification_rate:
-                continue
-
-            classification = self._classify(src=packet.src)
-            if (
-                not classification["is_safe"]
-                and self.notify
-                and not classification["notified"]
+            for packet in self.sniffer.stream_packets(
+                duration=self.duration, wait_for=self.wait_for
             ):
-                self.send_notification(packet_src=packet.src)
+                packet = packet[modules.IP]
+                if random.random() > self.classification_rate:
+                    continue
 
-        self.cleanup()
+                classification = self._classify(src=packet.src)
+                if (
+                    not classification["is_safe"]
+                    and self.notify
+                    and not classification["notified"]
+                ):
+                    self.send_notification(packet_src=packet.src)
+
+            self.cleanup()
+
+        except Exception:
+            console.print_exception()
+            self.cleanup()
 
     def cleanup(self) -> None:
         console.print("Cleaning up...", style="info", verbose=self.verbose)
-        self.sniffer.stop()
+        if self.sniffer:
+            self.sniffer.stop()
         if os.path.isfile(self.lock_name):
             os.unlink(self.lock_name)
         exit()

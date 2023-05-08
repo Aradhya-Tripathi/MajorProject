@@ -5,12 +5,7 @@ from pathlib import Path
 from typing import Any
 
 from cli.renderer import console
-
-
-class _Json(list):
-    def save(self, path: str):
-        with open(path, "w") as f:
-            f.write(json.dumps(self, indent=2))
+from src.utils import Json
 
 
 class HistoryObject(dict):
@@ -49,9 +44,9 @@ class History:
 
         if os.path.isfile(self.history_path):
             with open(self.history_path, "r+") as f:
-                self.history = _Json(json.loads(f.read()))
+                self.history = Json(json.loads(f.read()))
         else:
-            self.history = _Json()
+            self.history = Json()
 
     def exists(self, src: str) -> bool:
         for instance in self.history:

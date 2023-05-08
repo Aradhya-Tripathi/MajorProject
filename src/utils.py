@@ -53,9 +53,9 @@ def set_env(vars: list, root_path: str = None):
         f.write("\n".join(vars))
 
 
-class Json(dict):
+class Json(list):
     def save(self, path: str):
-        with open(path, "w+") as f:
+        with open(path, "w") as f:
             f.write(json.dumps(self, indent=2))
 
 
