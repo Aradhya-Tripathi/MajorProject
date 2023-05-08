@@ -6,7 +6,8 @@ import time
 from typing import Generator
 
 from cli.renderer import console, render_sniffed_packets
-from src.ip.utils import PORT_MAPPINGS, QUESTIONS, hostname, private_ip, proto_lookup
+from src.ip.history import History
+from src.ip.utils import QUESTIONS, private_ip, proto_lookup
 from src.utils import Timeout, convert_unix_timestamp, get_src, parse_duration
 
 logging.getLogger("scapy").setLevel(logging.ERROR)
@@ -28,16 +29,16 @@ class Sniffer:
         only_inbound: bool = False,
         show_packets: bool = False,
         is_async: bool = False,
+        record: bool = True,
     ):
         if os.getuid() != 0:
             raise PermissionError(
                 "Not enough permissions to run this sniffer use as root"
             )
         self.verbose = verbose
+        self.record = record
         self.show_packets = show_packets
         self.is_async = is_async
-        console.print("Initializing Parameters...", verbose=self.verbose, style="info")
-
         self.send_request = send_request
         self.bp_filters = bp_filters if bp_filters else ""
         self.sniff_count = sniff_count
@@ -49,6 +50,20 @@ class Sniffer:
         self.packet_count = 0
         self._sniffer = None
         self.packets = []
+
+        console.print(
+            "\n",
+            "-" * 20,
+            "Sniffer",
+            "-" * 20,
+            "\n",
+            verbose=self.verbose,
+            style="info",
+        )
+
+        if self.record:
+            self.history = History()
+            console.print("Storing all network activity.", style="blink red")
 
         console.print("Parameters initialized.", verbose=self.verbose, style="info")
         self.sniff()
@@ -86,6 +101,16 @@ class Sniffer:
         self.packets.append(packet)
         self.packet_count += 1
         ip_packet = packet[modules.IP]
+
+        if self.record:
+            self.history.add(
+                src=ip_packet.src,
+                dst=ip_packet.dst,
+                is_safe=None,
+                dport=getattr(ip_packet, "dport", None),
+                sport=getattr(ip_packet, "sport", None),
+                protocal=self.proto_lookup_table[ip_packet.proto],
+            )
 
         if not self.show_packets:
             return

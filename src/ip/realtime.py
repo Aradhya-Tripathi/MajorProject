@@ -8,6 +8,7 @@ import subprocess
 import sys
 import time
 from typing import Any
+from warnings import warn
 
 import asciichartpy as asc
 from rich import box
@@ -18,9 +19,10 @@ from rich.live import Live
 from rich.panel import Panel
 from rich.style import Style
 from rich.text import Text
-from scapy import all as modules
-
 from cli.renderer import console
+
+
+from scapy import all as modules
 
 # from src.ip.classification import model
 from src.ip.classification.abuseip import AbuseIPClassification
@@ -331,7 +333,12 @@ class Realtime:
         self.classification_rate = classification_rate
 
         if sys.platform != "darwin" and notify:
-            raise OSError("Only supports notifcation for darwin systems")
+            warn(
+                """Only supports pop up notifcation for darwin systems however
+terminal bell will still work if supported by the terminal""",
+                category=UserWarning,
+                stacklevel=3,
+            )
 
         self.notify = notify
 
@@ -355,6 +362,7 @@ class Realtime:
         self.cleanup()
 
     def send_notification(self, packet_src: str) -> None:
+        console.bell()
         message = f"Unsafe packet detected from {packet_src}"
         command = (
             f'display notification "{message}" with title "Unsafe packet detected"'
@@ -389,11 +397,11 @@ class Realtime:
         """
         self.setup()
         console.print(
-            "\n[italic]Starting sniffer and streaming packets\n",
+            f"\n[italic]Monitoring with a classification rate of {self.classification_rate * 100}%\n",
             style="info",
             verbose=self.verbose,
         )
-        self.sniffer = Sniffer(**self.kwargs)
+        self.sniffer = Sniffer(**self.kwargs, verbose=self.verbose)
 
         for packet in self.sniffer.stream_packets(
             duration=self.duration, wait_for=self.wait_for
@@ -410,11 +418,11 @@ class Realtime:
             ):
                 self.send_notification(packet_src=packet.src)
 
-        # If stopped via timeout.
         self.cleanup()
 
     def cleanup(self) -> None:
-        console.print("Cleaning up", style="info", verbose=self.verbose)
+        console.print("Cleaning up...", style="info", verbose=self.verbose)
         self.sniffer.stop()
         if os.path.isfile(self.lock_name):
             os.unlink(self.lock_name)
+        exit()

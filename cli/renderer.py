@@ -87,7 +87,7 @@ console = AdaptiveConsole(
             "repr.ellipsis": "",
             "repr.number": "",
         },
-    )
+    ),
 )
 
 
