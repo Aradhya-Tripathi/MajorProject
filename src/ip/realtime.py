@@ -153,13 +153,6 @@ class Dashboard:
         if str(self.capture_info[info_name]).count("\n") >= max_lines:
             self.capture_info[info_name] = {}
 
-    def _sort(self, data: dict[str, Any | str]) -> None:
-        _sorted_item = {
-            k: v
-            for k, v in sorted(data.items(), key=lambda item: item[1], reverse=True)
-        }
-        return _sorted_item
-
     def _format_dict_to_str(self, item: dict[str, Any | str]) -> str:
         dict_to_str = ""
         for protocal, freq in item.items():
@@ -217,7 +210,7 @@ class Dashboard:
 
         for info in ["protocals", "dports", "sports", "sources"]:
             self.capture_info["top_" + info] = Text(
-                self._format_dict_to_str(self._sort(data=getattr(self, info))),
+                self._format_dict_to_str(getattr(self, info)),
                 justify="center",
                 style=self.color_map[info],
             )
