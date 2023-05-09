@@ -7,13 +7,14 @@ import signal
 import subprocess
 import sys
 import time
-from typing import Any
+from typing import TYPE_CHECKING, Any
 from warnings import warn
 
 import asciichartpy as asc
-from rich import box
 
-# Rich imports specefically for dashboard class
+# isort: off
+
+from rich import box
 from rich.layout import Layout
 from rich.live import Live
 from rich.panel import Panel
@@ -23,11 +24,16 @@ from cli.renderer import console
 
 from scapy import all as modules
 
+# isort: on
+
 # from src.ip.classification import model
 from src.ip.classification.abuseip import AbuseIPClassification
 from src.ip.sniff import Sniffer
 from src.ip.utils import PORT_MAPPINGS, hostname
 from src.utils import parse_duration
+
+if TYPE_CHECKING:
+    from rich.console import RenderableType
 
 
 class Dashboard:
@@ -55,6 +61,7 @@ class Dashboard:
         self.dports = {}
         self.sources = {}
         self.capture_info = {
+            "network_graph": Text(""),
             "top_protocals": Text(""),
             "details": Text(""),
             "threats": Text(""),
@@ -72,17 +79,55 @@ class Dashboard:
         self.sniffer = Sniffer(**kwargs)
         self.render()
 
+    def initialize_panels(self) -> None:
+        def _create_panel(renderable: "RenderableType", title: str) -> Panel:
+            return Panel(
+                renderable=renderable,
+                title=title,
+                box=box.HEAVY,
+                style="bright_black",
+            )
+
+        self.network_traffic_panel = _create_panel(
+            "", "[bold light_coral]Real-time Network Traffic"
+        )
+        self.packet_details_panel = _create_panel("", "[bold cyan]Packet Flow")
+        self.threat_alert_panel = _create_panel("", "[bold red]Threat Alerts")
+        self.top_protocals_panel = _create_panel("", "[bold cyan]Top Protocols")
+        self.top_dports_panel = _create_panel("", "[bold cyan]Top Destination Ports")
+        self.top_sports_panel = _create_panel("", "[bold cyan]Top Source Ports")
+        self.top_sources_panel = _create_panel("", "[bold cyan]Top Sources")
+
+    def initialize_layout(self) -> None:
+        self.layout = Layout()
+
+        self.layout.split_column(
+            Layout(renderable=self.network_traffic_panel, name="top"),
+            Layout(name="middle", ratio=self.middle_column_ratio),
+            Layout(name="bottom"),
+        )
+
+        self.layout["middle"].split_row(
+            Layout(
+                renderable=self.packet_details_panel,
+                name="left",
+                ratio=self.middle_column_ratio,
+            ),
+            Layout(renderable=self.threat_alert_panel, name="right"),
+        )
+
+        self.layout["bottom"].split_row(
+            Layout(name="bottom_left", renderable=self.top_protocals_panel),
+            Layout(name="bottom_middle1", renderable=self.top_dports_panel),
+            Layout(name="bottom_middle2", renderable=self.top_sports_panel),
+            Layout(name="bottom_right", renderable=self.top_sources_panel),
+        )
+
     def capture_statistics(self) -> float:
         # Reset all defaults.
         self.flush()
         time.sleep(parse_duration(self.capture_duration))
         self.set_capture_details()
-        return self.get_network_traffic(
-            round(
-                self.sniffer.packet_count / parse_duration(self.capture_duration),
-                self._precision,
-            )
-        )
 
     def flush(self) -> None:
         self.sniffer.packet_count = 0
@@ -93,26 +138,20 @@ class Dashboard:
 
         self.clear_capture_info("threats", self.height // self.middle_column_ratio)
         self.clear_capture_info("details", self.height // self.middle_column_ratio)
+        self.clear_top_info("top_dports", self.height // self.middle_column_ratio + 1)
+        self.clear_top_info("top_sports", self.height // self.middle_column_ratio + 1)
         self.clear_top_info(
-            "top_dports", self.dports, self.height // self.middle_column_ratio + 1
+            "top_protocals", self.height // self.middle_column_ratio + 1
         )
-        self.clear_top_info(
-            "top_sports", self.sports, self.height // self.middle_column_ratio + 1
-        )
-        self.clear_top_info(
-            "top_protocals", self.protocals, self.height // self.middle_column_ratio + 1
-        )
-        self.clear_top_info(
-            "top_sources", self.sources, self.height // self.middle_column_ratio + 1
-        )
+        self.clear_top_info("top_sources", self.height // self.middle_column_ratio + 1)
 
     def clear_capture_info(self, info_name: str, max_lines: int) -> None:
         if str(self.capture_info[info_name]).count("\n") >= max_lines:
             self.capture_info[info_name] = Text("")
 
-    def clear_top_info(self, info_name: str, info_dict: dict, max_lines: int) -> None:
+    def clear_top_info(self, info_name: str, max_lines: int) -> None:
         if str(self.capture_info[info_name]).count("\n") >= max_lines:
-            info_dict.clear()
+            self.capture_info[info_name] = {}
 
     def _sort(self, data: dict[str, Any | str]) -> None:
         _sorted_item = {
@@ -169,6 +208,13 @@ class Dashboard:
 
         self.get_threats(srcs=srcs, packets=packets_for_model)
 
+        self.capture_info["network_graph"] = self.get_network_traffic(
+            round(
+                self.sniffer.packet_count / parse_duration(self.capture_duration),
+                self._precision,
+            )
+        )
+
         for info in ["protocals", "dports", "sports", "sources"]:
             self.capture_info["top_" + info] = Text(
                 self._format_dict_to_str(self._sort(data=getattr(self, info))),
@@ -207,7 +253,7 @@ class Dashboard:
                 else f"[green]* Safe packet source {host}[/green]\n",
             )
 
-    def get_dashboard(
+    def update_dashboard(
         self,
         network_traffic_renderable: Text,
         packet_details_renderable: Text,
@@ -216,99 +262,42 @@ class Dashboard:
         top_dports_renderable: Text,
         top_sports_renderable: Text,
         top_sources_renderable: Text,
-    ) -> Layout:
-        layout = Layout()
+    ) -> None:
+        self.network_traffic_panel.renderable = network_traffic_renderable
+        self.packet_details_panel.renderable = packet_details_renderable
+        self.threat_alert_panel.renderable = threat_alert_renderable
+        self.top_protocals_panel.renderable = top_protocals_renderable
+        self.top_dports_panel.renderable = top_dports_renderable
+        self.top_sports_panel.renderable = top_sports_renderable
+        self.top_sources_panel.renderable = top_sources_renderable
 
-        # Panels
-        network_traffic_panel = Panel(
-            network_traffic_renderable,
-            title="[bold light_coral]Real-time Network Traffic[/bold light_coral]",
-            border_style="bold red",
-            box=box.HEAVY,
-        )
+        self.layout["top"]._renderable = self.network_traffic_panel
+        self.layout["middle"]["left"]._renderable = self.packet_details_panel
+        self.layout["middle"]["right"]._renderable = self.threat_alert_panel
 
-        packet_details_panel = Panel(
-            packet_details_renderable,
-            title="[bold cyan]Packet Flow[/bold cyan]",
-            border_style="bright_black",
-            box=box.HEAVY,
-        )
-
-        threat_alert_panel = Panel(
-            threat_alert_renderable,
-            title="[bold red]Threat Alerts[/bold red]",
-            border_style="bright_black",
-            box=box.HEAVY,
-        )
-
-        top_protocals_panel = Panel(
-            top_protocals_renderable,
-            title="[bold cyan]Top Protocols[/bold cyan]",
-            border_style="bright_black",
-            box=box.HEAVY,
-        )
-
-        top_dports_panel = Panel(
-            top_dports_renderable,
-            title="[bold cyan]Top Destination Ports[/bold cyan]",
-            border_style="bright_black",
-            box=box.HEAVY,
-        )
-        top_sports_panel = Panel(
-            top_sports_renderable,
-            title="[bold cyan]Top Source Ports[/bold cyan]",
-            border_style="bright_black",
-            box=box.HEAVY,
-        )
-
-        top_sources_panel = Panel(
-            top_sources_renderable,
-            title="[bold cyan]Top Sources[/bold cyan]",
-            border_style="bright_black",
-            box=box.HEAVY,
-        )
-
-        layout.split_column(
-            Layout(renderable=network_traffic_panel, name="top"),
-            Layout(name="middle", ratio=self.middle_column_ratio),
-            Layout(name="bottom"),
-        )
-
-        layout["middle"].split_row(
-            Layout(
-                renderable=packet_details_panel,
-                name="left",
-                ratio=self.middle_column_ratio,
-            ),
-            Layout(renderable=threat_alert_panel, name="right"),
-        )
-
-        layout["bottom"].split_row(
-            Layout(name="bottom_left", renderable=top_protocals_panel),
-            Layout(name="bottom_middle1", renderable=top_dports_panel),
-            Layout(name="bottom_middle2", renderable=top_sports_panel),
-            Layout(name="bottom_right", renderable=top_sources_panel),
-        )
-
-        return layout
+        self.layout["bottom"]["bottom_left"]._renderable = self.top_protocals_panel
+        self.layout["bottom"]["bottom_middle1"]._renderable = self.top_dports_panel
+        self.layout["bottom"]["bottom_middle2"]._renderable = self.top_sports_panel
+        self.layout["bottom"]["bottom_right"]._renderable = self.top_sources_panel
 
     def render(self) -> None:
+        self.initialize_panels()
+        self.initialize_layout()
+
         with Live(auto_refresh=False, screen=False) as live:
             try:
                 while True:
-                    network_traffic = self.capture_statistics()
-                    live.update(
-                        self.get_dashboard(
-                            network_traffic_renderable=network_traffic,
-                            threat_alert_renderable=self.capture_info["threats"],
-                            packet_details_renderable=self.capture_info["details"],
-                            top_protocals_renderable=self.capture_info["top_protocals"],
-                            top_dports_renderable=self.capture_info["top_dports"],
-                            top_sports_renderable=self.capture_info["top_sports"],
-                            top_sources_renderable=self.capture_info["top_sources"],
-                        ),
-                        refresh=True,
+                    self.capture_statistics()
+                    self.update_dashboard(
+                        network_traffic_renderable=self.capture_info["network_graph"],
+                        threat_alert_renderable=self.capture_info["threats"],
+                        packet_details_renderable=self.capture_info["details"],
+                        top_protocals_renderable=self.capture_info["top_protocals"],
+                        top_dports_renderable=self.capture_info["top_dports"],
+                        top_sports_renderable=self.capture_info["top_sports"],
+                        top_sources_renderable=self.capture_info["top_sources"],
                     )
+                    live.update(self.layout, refresh=True)
             except KeyboardInterrupt:
                 console.print("Safely shutting down the sniffer...", style="info")
                 self.sniffer.stop()
@@ -370,9 +359,9 @@ terminal bell will still work if supported by the terminal""",
         subprocess.run(shlex.split(f"osascript -e '{command}'"))
         self.classified_packets[packet_src]["notified"] = True
 
-    def dashboard(self, capture_duration: str = "0.5 second") -> None:
+    def dashboard(self, capture_duration: str = "0.5 second") -> Dashboard:
         # Only for cli usage.
-        Dashboard(
+        return Dashboard(
             classification_rate=self.classification_rate,
             capture_duration=capture_duration,
             **self.kwargs,
