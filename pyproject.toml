@@ -42,4 +42,4 @@ path = "src/__init__.py"
 Home = "https://github.com/Aradhya-Tripathi/MajorProject"
 
 [project.scripts]
-netscanner = 'cli.app:main'
+netscanner = 'cli.main:main'
