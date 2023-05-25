@@ -5,13 +5,13 @@ from trogon import tui
 
 from cli.renderer import render_netscanner, render_table_with_details
 
-VERBOSE = False
-
 
 @tui()
 @click.group()
-def netscanner_commands():
-    pass
+@click.option("--verbose", "-v", is_flag=True, default=False)
+@click.pass_context
+def netscanner_commands(ctx, verbose: bool):
+    ctx.obj = verbose
 
 
 def extra_kwargs(ctx, kwargs: dict[any, any]):
@@ -40,14 +40,14 @@ def parse_kwargs(kwargs: dict[str, str]) -> None:
 @click.option("--extra-questions", default=None, type=str)
 @click.option("--send-request", default=False, is_flag=True)
 @click.option("--only-inbound", default=False, is_flag=True)
-@click.option("--verbose", "-v", default=VERBOSE, is_flag=True)
+@click.pass_obj
 def sniff(
+    verbose: bool,
     bp_filters: str = None,
     sniff_count: int = 0,
     extra_questions: str = None,
     send_request: bool = False,
     only_inbound: bool = False,
-    verbose: bool = VERBOSE,
 ) -> None:
     from src.ip.sniff import Sniffer
 
@@ -67,8 +67,8 @@ def sniff(
 
 @click.command("traceroute", help="Trace route of packets using SYN packet flooding")
 @click.argument("destination", type=str)
-@click.option("--verbose", "-v", default=False, is_flag=True)
-def traceroute(destination: str, verbose: bool = False) -> None:
+@click.pass_obj
+def traceroute(verbose: bool, destination: str) -> None:
     from src.ip.analyzer import NetworkAnalyzer
 
     intermediate_node_details, _ = NetworkAnalyzer(

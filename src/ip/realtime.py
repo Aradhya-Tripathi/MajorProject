@@ -189,17 +189,8 @@ class Dashboard:
                 style="cyan",
                 justify="center",
             )
-            packets_for_model.append(
-                [
-                    proto,
-                    packet.flags,
-                    len(packet.load) if hasattr(packet, "load") else 0,
-                    len(packet.payload) if hasattr(packet, "payload") else 0,
-                    packet[modules.TCP].urgptr if packet.haslayer(modules.TCP) else 0,
-                ]
-            )
 
-        self.get_threats(srcs=srcs, packets=packets_for_model)
+        self.get_threats(srcs=srcs)
 
         self.capture_info["network_graph"] = self.get_network_traffic(
             round(
@@ -223,12 +214,11 @@ class Dashboard:
         )
         return graph
 
-    def get_threats(self, srcs: set, packets: list[modules.Packet]) -> None:
+    def get_threats(self, srcs: set) -> None:
         if random.random() > self.classification_rate:
             return
 
         packet_details = AbuseIPClassification(srcs).detect()
-        # model.predict(packets=packets),
 
         if not isinstance(packet_details, dict):
             for detail in packet_details:
@@ -353,8 +343,7 @@ terminal bell will still work if supported by the terminal""",
         self.classified_packets[packet_src]["notified"] = True
 
     def dashboard(self, capture_duration: str = "0.5 second") -> Dashboard:
-        # Only for cli usage.
-        return Dashboard(
+        Dashboard(
             classification_rate=self.classification_rate,
             capture_duration=capture_duration,
             **self.kwargs,

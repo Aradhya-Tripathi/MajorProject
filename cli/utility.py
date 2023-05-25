@@ -62,15 +62,15 @@ def set_env_variables() -> None:
     default=False,
     help="Use GPT for verbose port information",
 )
-@click.option("--verbose", "-v", is_flag=True, default=False)
+@click.pass_obj
 def ports_in_use(
+    verbose: bool,
     host: str,
     start: int = 0,
     end: int = 1000,
     max_workers: int = 10,
     timeout: str = None,
     use_gpt: bool = False,
-    verbose: bool = False,
 ) -> None:
     from src.ip.utils import ports_in_use
     from src.utils import Timeout

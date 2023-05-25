@@ -15,13 +15,13 @@ def realtime():
 )
 @click.option("--capture-duration", type=str, default="0.5 second")
 @click.option("--classification-rate", type=float, default=0.5)
-@click.option("--verbose", "-v", is_flag=True, default=False)
+@click.pass_obj
 @click.pass_context
 def dashboard(
-    ctx,
+    ctx: dict,
+    verbose: bool,
     capture_duration: str = "0.5 second",
     classification_rate: float = 0.5,
-    verbose: bool = False,
 ) -> None:
     from src.ip.realtime import Realtime
 
@@ -41,15 +41,15 @@ def dashboard(
 @click.option("--duration", type=str, default=None)
 @click.option("--wait-for", type=int, default=1)
 @click.option("--notify", is_flag=True, default=False)
-@click.option("--verbose", "-v", is_flag=True, default=False)
+@click.pass_obj
 @click.pass_context
 def monitor(
-    ctx,
+    ctx: dict,
+    verbose: bool,
     duration: str = None,
     wait_for: int = 1,
     notify: bool = False,
     classification_rate: float = 0.5,
-    verbose: bool = False,
 ) -> None:
     from src.ip.realtime import Realtime
 
