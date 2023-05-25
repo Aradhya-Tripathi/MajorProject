@@ -4,7 +4,7 @@ from concurrent.futures import ThreadPoolExecutor
 from src.ip import session
 
 api_url = "https://api.abuseipdb.com/api/v2/check"
-headers = {"Accept": "application/json", "Key": os.getenv("AbuseIPDb-Key")}
+headers = {"Accept": "application/json", "Key": os.getenv("ABUSEIPKEY")}
 
 
 class AbuseIPClassification:

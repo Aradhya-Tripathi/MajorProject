@@ -16,10 +16,10 @@ sudo netscanner traceroute apple.com
 sudo netscanner classify intermediate-node apple.com
 
 # Realtime Monitor
-sudo netscanner realtime monitor --only-inbound true --bp-filters "tcp" --notify --duration "10 second" -v
+sudo netscanner -v realtime monitor --only-inbound True --bp-filters "tcp" --notify --duration "2 second"
 
 
 # Realtime Dashbaord
-sudo netscanner realtime dashboard
+sudo netscanner realtime dashboard --time-to-live "2 second"
 
 # ping 103.189.235.178 during monitor or dashboard

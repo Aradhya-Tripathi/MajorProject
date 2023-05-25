@@ -20,11 +20,13 @@ def realtime():
 )
 @click.option("--capture-duration", type=str, default="0.5 second")
 @click.option("--classification-rate", type=float, default=0.5)
+@click.option("--time-to-live", type=str, default=None)
 @click.pass_context
 def dashboard(
     ctx: "Context",
     capture_duration: str = "0.5 second",
     classification_rate: float = 0.5,
+    time_to_live: str = None,
 ) -> None:
     from src.ip.realtime import Realtime
 
@@ -33,7 +35,7 @@ def dashboard(
 
     Realtime(
         classification_rate=classification_rate, verbose=ctx.obj, **kwargs
-    ).dashboard(capture_duration=capture_duration)
+    ).dashboard(capture_duration=capture_duration, time_to_live=time_to_live)
 
 
 @realtime.command(

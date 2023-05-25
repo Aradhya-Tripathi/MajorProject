@@ -1,5 +1,3 @@
-# This file is to handle background sniffing and or classifying and reporting the same.
-
 import os
 import random
 import shlex
@@ -26,11 +24,10 @@ from scapy import all as modules
 
 # isort: on
 
-# from src.ip.classification import model
 from src.ip.classification.abuseip import AbuseIPClassification
 from src.ip.sniff import Sniffer
 from src.ip.utils import PORT_MAPPINGS, hostname
-from src.utils import parse_duration
+from src.utils import Timeout, parse_duration
 
 if TYPE_CHECKING:
     from rich.console import RenderableType
@@ -41,6 +38,7 @@ class Dashboard:
         self,
         capture_duration: str = "0.5 second",
         classification_rate: float = 0.5,
+        time_to_live: str = None,
         **kwargs,
     ) -> None:
         self._precision = 3
@@ -49,6 +47,7 @@ class Dashboard:
         self.middle_column_ratio = 2
         self.capture_duration = capture_duration
         self.classification_rate = classification_rate
+        self.time_to_live = parse_duration(time_to_live) if time_to_live else None
         self.plot_configs = {
             "max": self.height // self.middle_column_ratio,  # Divided into 3 columns
             "min": 0,
@@ -264,26 +263,29 @@ class Dashboard:
         self.layout["bottom"]["bottom_right"]._renderable = self.top_sources_panel
 
     def render(self) -> None:
-        self.initialize_panels()
-        self.initialize_layout()
+        with Timeout(seconds=self.time_to_live, kill_func=self.sniffer.stop):
+            self.initialize_panels()
+            self.initialize_layout()
 
-        with Live(auto_refresh=False, screen=False) as live:
-            try:
-                while True:
-                    self.capture_statistics()
-                    self.update_dashboard(
-                        network_traffic_renderable=self.capture_info["network_graph"],
-                        threat_alert_renderable=self.capture_info["threats"],
-                        packet_details_renderable=self.capture_info["details"],
-                        top_protocals_renderable=self.capture_info["top_protocals"],
-                        top_dports_renderable=self.capture_info["top_dports"],
-                        top_sports_renderable=self.capture_info["top_sports"],
-                        top_sources_renderable=self.capture_info["top_sources"],
-                    )
-                    live.update(self.layout, refresh=True)
-            except KeyboardInterrupt:
-                console.print("Safely shutting down the sniffer...", style="info")
-                self.sniffer.stop()
+            with Live(auto_refresh=False, screen=False) as live:
+                try:
+                    while self.sniffer._sniffer.running:
+                        self.capture_statistics()
+                        self.update_dashboard(
+                            network_traffic_renderable=self.capture_info[
+                                "network_graph"
+                            ],
+                            threat_alert_renderable=self.capture_info["threats"],
+                            packet_details_renderable=self.capture_info["details"],
+                            top_protocals_renderable=self.capture_info["top_protocals"],
+                            top_dports_renderable=self.capture_info["top_dports"],
+                            top_sports_renderable=self.capture_info["top_sports"],
+                            top_sources_renderable=self.capture_info["top_sources"],
+                        )
+                        live.update(self.layout, refresh=True)
+
+                except KeyboardInterrupt:
+                    self.sniffer.stop()
 
 
 class Realtime:
@@ -342,10 +344,13 @@ terminal bell will still work if supported by the terminal""",
         subprocess.run(shlex.split(f"osascript -e '{command}'"))
         self.classified_packets[packet_src]["notified"] = True
 
-    def dashboard(self, capture_duration: str = "0.5 second") -> Dashboard:
+    def dashboard(
+        self, capture_duration: str = "0.5 second", time_to_live: str = None
+    ) -> None:
         Dashboard(
             classification_rate=self.classification_rate,
             capture_duration=capture_duration,
+            time_to_live=time_to_live,
             **self.kwargs,
         )
 
