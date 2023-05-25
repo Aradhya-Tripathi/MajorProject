@@ -25,4 +25,4 @@ jobs:
         env:
           ABUSEIPKEY: ${{ secrets.ABUSEIPKEY }}
         run: |
-          python unittest -v
+          python -m unittest -v
