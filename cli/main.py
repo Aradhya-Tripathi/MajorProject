@@ -1,20 +1,16 @@
 import sys
+import typing
 
 import click
 from trogon import tui
 
 from cli.renderer import render_netscanner, render_table_with_details
 
-
-@tui()
-@click.group()
-@click.option("--verbose", "-v", is_flag=True, default=False)
-@click.pass_context
-def netscanner_commands(ctx, verbose: bool):
-    ctx.obj = verbose
+if typing.TYPE_CHECKING:
+    from click.core import Context
 
 
-def extra_kwargs(ctx, kwargs: dict[any, any]):
+def extra_kwargs(ctx: "Context", kwargs: dict[any, any]):
     for i in range(0, len(ctx.args), 2):
         key = ctx.args[i].replace("--", "").replace("-", "_")
         value = ctx.args[i + 1]
@@ -29,6 +25,14 @@ def parse_kwargs(kwargs: dict[str, str]) -> None:
             kwargs[k] = eval(v)
         except Exception:
             ...
+
+
+@tui()
+@click.group()
+@click.option("--verbose", "-v", is_flag=True, default=False)
+@click.pass_context
+def netscanner_commands(ctx: "Context", verbose: bool):
+    ctx.obj = verbose
 
 
 @click.command(

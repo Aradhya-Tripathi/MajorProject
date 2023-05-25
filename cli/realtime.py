@@ -1,6 +1,11 @@
+import typing
+
 import click
 
 from cli.main import extra_kwargs, netscanner_commands
+
+if typing.TYPE_CHECKING:
+    from click.core import Context
 
 
 @netscanner_commands.group()
@@ -15,11 +20,9 @@ def realtime():
 )
 @click.option("--capture-duration", type=str, default="0.5 second")
 @click.option("--classification-rate", type=float, default=0.5)
-@click.pass_obj
 @click.pass_context
 def dashboard(
-    ctx: dict,
-    verbose: bool,
+    ctx: "Context",
     capture_duration: str = "0.5 second",
     classification_rate: float = 0.5,
 ) -> None:
@@ -29,7 +32,7 @@ def dashboard(
     extra_kwargs(ctx, kwargs)
 
     Realtime(
-        classification_rate=classification_rate, verbose=verbose, **kwargs
+        classification_rate=classification_rate, verbose=ctx.obj, **kwargs
     ).dashboard(capture_duration=capture_duration)
 
 
@@ -41,11 +44,9 @@ def dashboard(
 @click.option("--duration", type=str, default=None)
 @click.option("--wait-for", type=int, default=1)
 @click.option("--notify", is_flag=True, default=False)
-@click.pass_obj
 @click.pass_context
 def monitor(
-    ctx: dict,
-    verbose: bool,
+    ctx: "Context",
     duration: str = None,
     wait_for: int = 1,
     notify: bool = False,
@@ -60,6 +61,6 @@ def monitor(
         wait_for=wait_for,
         notify=notify,
         classification_rate=classification_rate,
-        verbose=verbose,
+        verbose=ctx.obj,
         **kwargs,
     ).monitor()
