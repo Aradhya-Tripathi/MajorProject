@@ -55,10 +55,6 @@ class Dashboard:
             "width": self.width,
         }
         self.capture_rates = []
-        self.protocals = {}
-        self.sports = {}
-        self.dports = {}
-        self.sources = {}
         self.capture_info = {
             "network_graph": Text(""),
             "top_protocals": Text(""),
@@ -68,6 +64,7 @@ class Dashboard:
             "top_sports": Text(""),
             "top_sources": Text(""),
         }
+        # Make this dynamic according to the theme set.
         self.color_map = {
             "protocals": "magenta",
             "sources": "magenta",
@@ -137,50 +134,42 @@ class Dashboard:
 
         self.clear_capture_info("threats", self.height // self.middle_column_ratio)
         self.clear_capture_info("details", self.height // self.middle_column_ratio)
-        self.clear_top_info("top_dports", self.height // self.middle_column_ratio + 1)
-        self.clear_top_info("top_sports", self.height // self.middle_column_ratio + 1)
-        self.clear_top_info(
+        self.clear_capture_info(
+            "top_dports", self.height // self.middle_column_ratio + 1
+        )
+        self.clear_capture_info(
+            "top_sports", self.height // self.middle_column_ratio + 1
+        )
+        self.clear_capture_info(
             "top_protocals", self.height // self.middle_column_ratio + 1
         )
-        self.clear_top_info("top_sources", self.height // self.middle_column_ratio + 1)
+        self.clear_capture_info(
+            "top_sources", self.height // self.middle_column_ratio + 1
+        )
 
     def clear_capture_info(self, info_name: str, max_lines: int) -> None:
         if str(self.capture_info[info_name]).count("\n") >= max_lines:
             self.capture_info[info_name] = Text("")
 
-    def clear_top_info(self, info_name: str, max_lines: int) -> None:
-        if str(self.capture_info[info_name]).count("\n") >= max_lines:
-            self.capture_info[info_name] = {}
-
-    def _format_dict_to_str(self, item: dict[str, Any | str]) -> str:
-        dict_to_str = ""
-        for protocal, freq in item.items():
-            dict_to_str += f"{protocal} - {freq}\n"
-        return dict_to_str
-
     def set_capture_details(self) -> None:
         srcs = set()
-        packets_for_model = []
         for packet in self.sniffer.packets:
             if not packet.haslayer(modules.IP):
                 continue
 
             packet = packet[modules.IP]
             srcs.add(packet.src)
-            proto = self.sniffer.proto_lookup_table[packet.proto]
-            src = hostname(packet.src)
 
-            self.protocals[proto] = self.protocals.get(proto, 0) + 1
-            self.sources[src] = self.sources.get(src, 0) + 1
-
-            try:
-                dport = PORT_MAPPINGS.get(packet.dport, packet.dport)
-                sport = PORT_MAPPINGS.get(packet.sport, packet.sport)
-                self.dports[dport] = self.dports.get(dport, 0) + 1
-                self.sports[sport] = self.sports.get(sport, 0) + 1
-            except AttributeError:
-                ...
-
+            self.capture_info["top_sources"] += " " + packet.src + "\n"
+            self.capture_info["top_dports"] += (
+                " " + str(getattr(packet, "dport", "N/A")) + "\n"
+            )
+            self.capture_info["top_sports"] += (
+                " " + str(getattr(packet, "sport", "N/A")) + "\n"
+            )
+            self.capture_info["top_protocals"] += (
+                " " + self.sniffer.proto_lookup_table[packet.proto] + "\n"
+            )
             self.capture_info["details"] += Text(
                 f"""* Source {hostname(packet.src)} - Destination {hostname(packet.dst)}\
  - Port(s/d) {getattr(packet, 'sport', 'N/A')}\
@@ -197,13 +186,6 @@ class Dashboard:
                 self._precision,
             )
         )
-
-        for info in ["protocals", "dports", "sports", "sources"]:
-            self.capture_info["top_" + info] = Text(
-                self._format_dict_to_str(getattr(self, info)),
-                justify="center",
-                style=self.color_map[info],
-            )
 
     def get_network_traffic(self, capture_rate: float) -> str:
         self.capture_rates.append(capture_rate)

@@ -11,7 +11,7 @@ from cli.renderer import (
 from src.utils import Timeout, parse_duration
 
 
-@netscanner_commands.group(help="Classification Support")
+@netscanner_commands.group()
 def classify():
     ...
 
