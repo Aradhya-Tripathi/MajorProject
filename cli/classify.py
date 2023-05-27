@@ -53,7 +53,6 @@ def ip_address(
 
 @classify.command("intermediate-node")
 @click.argument("destination", type=str)
-@click.option("--verbose", "-v", is_flag=True, default=False)
 @click.option("--timeout", "-t", type=str)
 def intermediate_node(
     destination: str,

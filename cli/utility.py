@@ -25,6 +25,7 @@ def public_ip() -> None:
 
 
 @utility.command("get-ip-address", help="Get domains IP address")
+@click.argument("domain", type=str)
 def get_ip_address(domain: str) -> None:
     from src.ip.analyzer import NetworkAnalyzer
 

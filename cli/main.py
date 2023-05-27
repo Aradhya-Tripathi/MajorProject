@@ -1,4 +1,3 @@
-import sys
 import typing
 
 import click
@@ -28,10 +27,13 @@ def parse_kwargs(kwargs: dict[str, str]) -> None:
 
 
 @tui()
-@click.group()
+@click.group(invoke_without_command=True)
 @click.option("--verbose", "-v", is_flag=True, default=False)
 @click.pass_context
 def netscanner_commands(ctx: "Context", verbose: bool):
+    if not ctx.invoked_subcommand:
+        render_netscanner()
+
     ctx.obj = verbose
 
 
@@ -94,9 +96,6 @@ netscanner_commands.add_command(classify)
 
 
 def main() -> None:
-    if len(sys.argv) == 1:
-        render_netscanner()
-
     netscanner_commands()
 
 
